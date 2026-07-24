@@ -22,11 +22,13 @@ import { saveFavoriteFromActivityAction } from "@/app/actions/favorites";
 import { ExportIcsButton } from "@/components/workspace/export-ics-button";
 import { PrintButton } from "@/components/workspace/print-button";
 import { CollaboratorsPanel } from "@/components/workspace/collaborators-panel";
-import { ActivityCard } from "@/components/workspace/activity-card";
+import { ActivityList } from "@/components/workspace/activity-list";
 import { AIChat } from "@/components/workspace/ai-chat";
-import { BudgetPanel } from "@/components/workspace/budget-panel";
+import { BudgetChart } from "@/components/workspace/budget-chart";
+import { PackingPanel } from "@/components/workspace/packing-panel";
 import { MapView } from "@/components/workspace/map-view";
 import { WeatherPanel } from "@/components/workspace/weather-panel";
+import { PaywallModal } from "@/components/paywall-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,6 +51,7 @@ export function TripWorkspace({
   const [pending, startTransition] = useTransition();
   const [mobileTab, setMobileTab] = useState("itinerary");
   const [favorited, setFavorited] = useState<Record<string, boolean>>({});
+  const [paywall, setPaywall] = useState(false);
 
   const isOwner = trip.owner_id === currentUserId;
   const activeDay = trip.days.find((d) => d.id === dayId) ?? trip.days[0];
@@ -86,7 +89,7 @@ export function TripWorkspace({
         };
         if (!r.ok || !res.ok) {
           toast.error(res.error || `Failed (${r.status})`);
-          if (res.paywall) router.push("/billing");
+          if (res.paywall || r.status === 402) setPaywall(true);
           return;
         }
         toast.success(
@@ -146,8 +149,31 @@ export function TripWorkspace({
     });
   }
 
+  function regenerateDay(dayId: string) {
+    if (!isOwner) return;
+    startTransition(async () => {
+      toast.message("Regenerating this day…");
+      const r = await fetch("/api/trips/regenerate-day", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId: trip.id, dayId }),
+      });
+      const res = (await r.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+      if (!r.ok || !res.ok) {
+        toast.error(res.error || "Day regen failed");
+        return;
+      }
+      toast.success("Day updated");
+      router.refresh();
+    });
+  }
+
   return (
-    <div className="flex h-[calc(100dvh-1.5rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100dvh-5.5rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
+      <PaywallModal open={paywall} onClose={() => setPaywall(false)} />
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
         <div className="min-w-0">
@@ -277,24 +303,28 @@ export function TripWorkspace({
               <p className="text-sm text-[var(--muted)]">
                 No days yet. Generate an itinerary to populate activities.
               </p>
-            ) : (
-              activeDay?.activities.map((a) => (
-                <ActivityCard
-                  key={a.id}
-                  activity={a}
-                  active={selectedActivity === a.id}
-                  onSelect={() => {
-                    setSelectedActivity(a.id);
-                    if (window.matchMedia("(max-width: 1023px)").matches) {
-                      setMobileTab("map");
-                    }
-                  }}
-                  destination={trip.destination}
-                  favorited={!!favorited[a.id]}
-                  onFavorite={() => favoriteActivity(a.id)}
-                />
-              ))
-            )}
+            ) : activeDay ? (
+              <ActivityList
+                tripId={trip.id}
+                dayId={activeDay.id}
+                dayNumber={
+                  trip.days.findIndex((d) => d.id === activeDay.id) + 1
+                }
+                activities={activeDay.activities}
+                destination={trip.destination}
+                canEdit={isOwner}
+                selectedId={selectedActivity}
+                onSelect={(id) => {
+                  setSelectedActivity(id);
+                  if (window.matchMedia("(max-width: 1023px)").matches) {
+                    setMobileTab("map");
+                  }
+                }}
+                favorited={favorited}
+                onFavorite={favoriteActivity}
+                onRegenerateDay={() => regenerateDay(activeDay.id)}
+              />
+            ) : null}
           </div>
         </div>
 
@@ -332,6 +362,9 @@ export function TripWorkspace({
               <TabsTrigger value="budget" className="flex-1 text-xs">
                 Budget
               </TabsTrigger>
+              <TabsTrigger value="pack" className="flex-1 text-xs">
+                Pack
+              </TabsTrigger>
               <TabsTrigger value="people" className="flex-1 text-xs">
                 People
               </TabsTrigger>
@@ -346,7 +379,14 @@ export function TripWorkspace({
               <WeatherPanel weather={weather} destination={trip.destination} />
             </TabsContent>
             <TabsContent value="budget" className="overflow-y-auto">
-              <BudgetPanel trip={trip} expenses={trip.expenses} />
+              <BudgetChart trip={trip} expenses={trip.expenses} />
+            </TabsContent>
+            <TabsContent value="pack" className="overflow-y-auto">
+              <PackingPanel
+                trip={trip}
+                weather={weather}
+                canEdit={isOwner}
+              />
             </TabsContent>
             <TabsContent value="people" className="overflow-y-auto">
               <CollaboratorsPanel tripId={trip.id} isOwner={isOwner} />

@@ -1,4 +1,5 @@
 import { AppNav } from "@/components/app-nav";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { requireProfile, requireUser } from "@/lib/auth";
 import { remainingGenerations } from "@/lib/credits";
 import { isSupabaseConfigured } from "@/lib/config";
@@ -45,7 +46,10 @@ export default async function AppLayout({
         plan={profile.plan}
         creditsLabel={creditsLabel}
       />
-      <div className="min-w-0 flex-1 overflow-auto">{children}</div>
+      <div className="min-w-0 flex-1 overflow-auto pb-20 lg:pb-0">
+        {children}
+      </div>
+      <MobileBottomNav />
     </div>
   );
 }

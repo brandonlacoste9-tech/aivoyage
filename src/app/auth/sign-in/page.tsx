@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GoogleOAuthButton } from "@/components/auth/oauth-buttons";
 
 function SignInForm() {
   const router = useRouter();
@@ -82,16 +83,20 @@ function SignInForm() {
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
         </Button>
-        <p className="text-center text-sm text-[var(--muted)]">
-          New here?{" "}
-          <Link
-            href="/auth/sign-up"
-            className="font-semibold text-[var(--lagoon)] hover:underline"
-          >
-            Create an account
-          </Link>
-        </p>
       </form>
+      <div className="relative my-4 text-center text-xs uppercase tracking-wider text-[var(--muted)]">
+        <span className="bg-[var(--card)] px-2">or</span>
+      </div>
+      <GoogleOAuthButton next={next} />
+      <p className="mt-4 text-center text-sm text-[var(--muted)]">
+        New here?{" "}
+        <Link
+          href={`/auth/sign-up?next=${encodeURIComponent(next)}`}
+          className="font-semibold text-[var(--lagoon)] hover:underline"
+        >
+          Create an account
+        </Link>
+      </p>
     </div>
   );
 }

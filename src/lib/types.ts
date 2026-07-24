@@ -37,6 +37,7 @@ export interface Trip {
   cover_url: string | null;
   error_message: string | null;
   notes: string | null;
+  packing_list?: unknown;
   created_at: string;
   updated_at: string;
 }

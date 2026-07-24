@@ -18,6 +18,7 @@ import type { Trip } from "@/lib/types";
 import { TripCard } from "@/components/trips/trip-card";
 import { DESTINATIONS, coverForDestination } from "@/lib/destinations";
 import { fetchWeather } from "@/lib/weather";
+import { SampleTripButton } from "@/components/dashboard/sample-trip-button";
 
 export const metadata = { title: "Dashboard" };
 
@@ -164,9 +165,12 @@ export default async function DashboardPage() {
                   with map, weather, and budget.
                 </p>
               </div>
-              <Button asChild variant="accent">
-                <Link href="/trips/new">Create your first trip</Link>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="accent">
+                  <Link href="/trips/new">Create your first trip</Link>
+                </Button>
+                <SampleTripButton />
+              </div>
             </div>
           </div>
         ) : (

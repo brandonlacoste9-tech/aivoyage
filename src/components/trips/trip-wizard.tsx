@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { createTripAction } from "@/app/actions/trips";
 import { Button } from "@/components/ui/button";
+import { PaywallModal } from "@/components/paywall-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +47,7 @@ export function TripWizard({
   const [travelers, setTravelers] = useState("2");
   const [interests, setInterests] = useState<string[]>(["food", "culture"]);
   const [prompt, setPrompt] = useState(defaultPrompt);
+  const [paywall, setPaywall] = useState(false);
 
   function toggleInterest(i: string) {
     setInterests((prev) =>
@@ -92,8 +94,8 @@ export function TripWizard({
 
       if (!res.ok || !gen.ok) {
         toast.error(gen.error || `Generation failed (${res.status})`);
-        if (gen.paywall) {
-          router.push("/billing");
+        if (gen.paywall || res.status === 402) {
+          setPaywall(true);
           return;
         }
         router.push(`/trips/${created.data.id}`);
@@ -114,6 +116,7 @@ export function TripWizard({
 
   return (
     <Card className="mx-auto max-w-2xl">
+      <PaywallModal open={paywall} onClose={() => setPaywall(false)} />
       <CardHeader>
         <CardTitle>Plan a new trip</CardTitle>
         <CardDescription>
