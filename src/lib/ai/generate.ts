@@ -4,6 +4,7 @@ import { daysBetween } from "@/lib/utils";
 import type { TripPreferences } from "@/lib/types";
 import {
   itinerarySchema,
+  parseItineraryLoose,
   type GeneratedItinerary,
 } from "@/lib/ai/schema";
 import {
@@ -18,7 +19,7 @@ function mockItinerary(input: {
   endDate: string;
   preferences: TripPreferences;
 }): GeneratedItinerary {
-  const count = daysBetween(input.startDate, input.endDate);
+  const count = Math.min(daysBetween(input.startDate, input.endDate), 7);
   const interests = input.preferences.interests?.length
     ? input.preferences.interests
     : ["culture", "food"];
@@ -71,9 +72,20 @@ function mockItinerary(input: {
 
   return {
     title: `${input.destination} Escape`,
-    overview: `A curated ${count}-day journey through ${input.destination}, generated in demo mode (no XAI_API_KEY / ANTHROPIC_API_KEY). Add a Grok or Claude key for place-specific plans.`,
+    overview: `Demo itinerary for ${input.destination} (AI key missing or unavailable).`,
     days,
   };
+}
+
+function extractJsonObject(text: string): unknown {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1] : text;
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("Model did not return JSON");
+  }
+  return JSON.parse(candidate.slice(start, end + 1));
 }
 
 export async function generateItinerary(input: {
@@ -83,23 +95,80 @@ export async function generateItinerary(input: {
   budgetCents: number | null;
   preferences: TripPreferences;
 }): Promise<GeneratedItinerary> {
-  const dayCount = daysBetween(input.startDate, input.endDate);
+  // Cap length so serverless functions finish before platform timeouts
+  const dayCount = Math.min(daysBetween(input.startDate, input.endDate), 7);
   const model = getPlanningModel();
 
   if (!model || !isAiConfigured()) {
+    console.warn("[voyageai] AI not configured — using mock itinerary");
     return mockItinerary(input);
   }
 
-  const { output } = await generateText({
-    model,
-    system: buildGenerateSystemPrompt(),
-    prompt: buildGenerateUserPrompt({ ...input, dayCount }),
-    output: Output.object({ schema: itinerarySchema }),
-  });
+  const system = buildGenerateSystemPrompt();
+  const prompt = buildGenerateUserPrompt({ ...input, dayCount });
+  const provider = getAiProviderLabel();
 
-  if (!output) {
-    throw new Error(`AI (${getAiProviderLabel()}) returned empty itinerary`);
+  // Path 1: structured object (preferred)
+  try {
+    const { output } = await generateText({
+      model,
+      system,
+      prompt,
+      output: Output.object({ schema: itinerarySchema }),
+      maxOutputTokens: 4096,
+      temperature: 0.7,
+    });
+
+    if (output) {
+      return parseItineraryLoose(output);
+    }
+  } catch (e) {
+    console.warn(
+      `[voyageai] structured output failed (${provider}):`,
+      e instanceof Error ? e.message : e,
+    );
   }
 
-  return output;
+  // Path 2: free-form JSON + loose parse
+  try {
+    const { text } = await generateText({
+      model,
+      system: `${system}
+
+Return ONLY a single JSON object (no markdown) matching:
+{
+  "title": string,
+  "overview": string,
+  "days": [
+    {
+      "day_number": number,
+      "summary": string,
+      "activities": [
+        {
+          "title": string,
+          "description": string,
+          "type": "food"|"culture"|"nature"|"nightlife"|"shopping"|"transport"|"stay"|"other",
+          "start_time": "HH:MM",
+          "duration_min": number,
+          "cost_cents": number,
+          "address"?: string,
+          "lat"?: number,
+          "lng"?: number
+        }
+      ]
+    }
+  ]
+}
+Exactly ${dayCount} days. At least 3 activities per day.`,
+      prompt,
+      maxOutputTokens: 4096,
+      temperature: 0.6,
+    });
+
+    const json = extractJsonObject(text);
+    return parseItineraryLoose(json);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`AI generation failed (${provider}): ${msg}`);
+  }
 }

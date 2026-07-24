@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { createTripAction } from "@/app/actions/trips";
-import { generateItineraryAction } from "@/app/actions/generate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,10 +74,24 @@ export function TripWizard({
         return;
       }
 
-      toast.message("Generating itinerary…");
-      const gen = await generateItineraryAction(created.data.id);
-      if (!gen.ok) {
-        toast.error(gen.error);
+      toast.message("Grok is planning your trip… (30–60s)");
+      // Use API route (maxDuration 60s) — more reliable on Netlify than Server Actions
+      const res = await fetch("/api/trips/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId: created.data.id }),
+      });
+      const gen = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        paywall?: boolean;
+        provider?: string;
+        days?: number;
+        activities?: number;
+      };
+
+      if (!res.ok || !gen.ok) {
+        toast.error(gen.error || `Generation failed (${res.status})`);
         if (gen.paywall) {
           router.push("/billing");
           return;
@@ -87,7 +100,11 @@ export function TripWizard({
         return;
       }
 
-      toast.success("Itinerary ready");
+      toast.success(
+        gen.provider
+          ? `Itinerary ready · ${gen.days ?? "?"} days via ${gen.provider}`
+          : "Itinerary ready",
+      );
       router.push(`/trips/${created.data.id}`);
       router.refresh();
     } finally {

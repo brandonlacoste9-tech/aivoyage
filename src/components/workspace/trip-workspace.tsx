@@ -13,7 +13,6 @@ import {
 import { toast } from "sonner";
 import type { TripWithDetails, WeatherDay } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { generateItineraryAction } from "@/app/actions/generate";
 import { ensureShareTokenAction } from "@/app/actions/trips";
 import { ActivityCard } from "@/components/workspace/activity-card";
 import { AIChat } from "@/components/workspace/ai-chat";
@@ -53,15 +52,31 @@ export function TripWorkspace({
 
   function regenerate() {
     startTransition(async () => {
-      toast.message("Regenerating itinerary…");
-      const res = await generateItineraryAction(trip.id);
-      if (!res.ok) {
-        toast.error(res.error);
-        if (res.paywall) router.push("/billing");
-        return;
+      toast.message("Grok is regenerating your trip…");
+      try {
+        const r = await fetch("/api/trips/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tripId: trip.id }),
+        });
+        const res = (await r.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+          paywall?: boolean;
+          provider?: string;
+        };
+        if (!r.ok || !res.ok) {
+          toast.error(res.error || `Failed (${r.status})`);
+          if (res.paywall) router.push("/billing");
+          return;
+        }
+        toast.success(
+          res.provider ? `Updated via ${res.provider}` : "Itinerary updated",
+        );
+        router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Regenerate failed");
       }
-      toast.success("Itinerary updated");
-      router.refresh();
     });
   }
 

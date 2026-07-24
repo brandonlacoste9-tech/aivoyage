@@ -9,20 +9,29 @@ import {
   ensureCreditsReset,
   incrementGeneration,
 } from "@/lib/credits";
-import { fallbackCoords, geocodePlace } from "@/lib/mapbox";
+import { fallbackCoords } from "@/lib/mapbox";
 import type { TripPreferences } from "@/lib/types";
-import { isSupabaseConfigured } from "@/lib/config";
+import { isSupabaseConfigured, isAiConfigured } from "@/lib/config";
+import { getAiProviderLabel } from "@/lib/ai/model";
 
+/**
+ * Server Action fallback — prefer POST /api/trips/generate on Netlify
+ * (longer maxDuration). Kept for local/dev convenience.
+ */
 export async function generateItineraryAction(
   tripId: string,
-): Promise<{ ok: true } | { ok: false; error: string; paywall?: boolean }> {
+): Promise<{ ok: true; provider?: string } | { ok: false; error: string; paywall?: boolean }> {
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
   }
 
   let profile = await requireProfile();
   const supabase = await createClient();
-  profile = await ensureCreditsReset(supabase, profile);
+  try {
+    profile = await ensureCreditsReset(supabase, profile);
+  } catch {
+    /* ignore */
+  }
 
   const gate = canGenerate(profile);
   if (!gate.ok) {
@@ -46,6 +55,10 @@ export async function generateItineraryAction(
     .eq("id", tripId);
 
   try {
+    if (!isAiConfigured()) {
+      console.warn("[generate action] no AI key — mock mode");
+    }
+
     const preferences = (trip.preferences || {}) as TripPreferences;
     const itinerary = await generateItinerary({
       destination: trip.destination,
@@ -55,10 +68,9 @@ export async function generateItineraryAction(
       preferences,
     });
 
-    // Clear previous days (cascade activities)
     await supabase.from("days").delete().eq("trip_id", tripId);
 
-    const start = new Date(trip.start_date);
+    const start = new Date(trip.start_date + "T12:00:00");
     let activityIndex = 0;
 
     for (const day of itinerary.days) {
@@ -79,26 +91,9 @@ export async function generateItineraryAction(
 
       if (dayErr || !dayRow) throw dayErr || new Error("Failed to insert day");
 
-      const activityRows = [];
-      for (let i = 0; i < day.activities.length; i++) {
-        const a = day.activities[i];
-        let lat = a.lat ?? null;
-        let lng = a.lng ?? null;
-
-        if (lat == null || lng == null) {
-          const geo = await geocodePlace(a.title, trip.destination);
-          if (geo) {
-            lat = geo.lat;
-            lng = geo.lng;
-          } else {
-            const fb = fallbackCoords(trip.destination, activityIndex);
-            lat = fb.lat;
-            lng = fb.lng;
-          }
-        }
-        activityIndex += 1;
-
-        activityRows.push({
+      const activityRows = day.activities.map((a, i) => {
+        const fb = fallbackCoords(trip.destination, activityIndex++);
+        return {
           day_id: dayRow.id,
           title: a.title,
           description: a.description,
@@ -106,12 +101,12 @@ export async function generateItineraryAction(
           start_time: a.start_time,
           duration_min: a.duration_min,
           cost_cents: a.cost_cents,
-          lat,
-          lng,
+          lat: a.lat ?? fb.lat,
+          lng: a.lng ?? fb.lng,
           address: a.address ?? null,
           sort_order: i,
-        });
-      }
+        };
+      });
 
       if (activityRows.length) {
         const { error: actErr } = await supabase
@@ -121,7 +116,6 @@ export async function generateItineraryAction(
       }
     }
 
-    // Seed expenses from activity costs
     const { data: allDays } = await supabase
       .from("days")
       .select("id")
@@ -152,18 +146,22 @@ export async function generateItineraryAction(
       .update({
         status: "ready",
         title: itinerary.title || trip.title,
-        notes: itinerary.overview,
+        notes: `${itinerary.overview}\n\n— Planned with ${getAiProviderLabel()}`,
       })
       .eq("id", tripId);
 
     if (profile.plan !== "pro") {
-      await incrementGeneration(supabase, profile.id);
+      try {
+        await incrementGeneration(supabase, profile.id);
+      } catch {
+        /* ignore */
+      }
     }
 
     revalidatePath(`/trips/${tripId}`);
     revalidatePath("/dashboard");
     revalidatePath("/trips");
-    return { ok: true };
+    return { ok: true, provider: getAiProviderLabel() };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Generation failed";
     await supabase

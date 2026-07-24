@@ -15,10 +15,13 @@
 # SPA-style fallback is handled by the Next.js runtime plugin.
 # Do not add a catch-all redirect to index.html for this app.
 
-# Optional: longer function timeout for AI generation (Pro plans support higher)
+# Longer timeout for AI itinerary generation (max depends on Netlify plan)
 [functions]
   node_bundler = "esbuild"
-  # included_files is managed by the Next plugin
+
+[functions."*"]
+  # Free/Starter often caps lower; Pro can go to 26s+. We also set maxDuration=60 in the route.
+  timeout = 26
 
 # Security headers
 [[headers]]

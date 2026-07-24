@@ -21,42 +21,57 @@ export async function requireUser() {
 export async function getProfile(): Promise<Profile | null> {
   const user = await getUser();
   if (!user) return null;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-  return data as Profile | null;
+  return ensureProfileRow(user.id, user.email);
 }
 
-export async function requireProfile() {
-  const user = await requireUser();
+/** Always returns a real DB profile row (upsert if missing). */
+export async function ensureProfileRow(
+  userId: string,
+  email?: string | null,
+): Promise<Profile> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!error && data) return data as Profile;
+
+  const display =
+    email?.split("@")[0] || "Traveler";
+  const resetAt = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1,
+    1,
+  ).toISOString();
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        display_name: display,
+        plan: "free",
+        ai_generations_month: 0,
+        ai_generations_reset_at: resetAt,
+      },
+      { onConflict: "id" },
+    )
+    .select("*")
     .single();
 
-  if (error || !data) {
-    // Profile missing (migration not run) — return a soft profile
-    return {
-      id: user.id,
-      display_name: user.email?.split("@")[0] ?? "Traveler",
-      avatar_url: null,
-      plan: "free" as const,
-      stripe_customer_id: null,
-      stripe_subscription_id: null,
-      ai_generations_month: 0,
-      ai_generations_reset_at: new Date(
-        new Date().getFullYear(),
-        new Date().getMonth() + 1,
-        1,
-      ).toISOString(),
-      created_at: new Date().toISOString(),
-    } satisfies Profile;
+  if (insertError || !inserted) {
+    throw new Error(
+      insertError?.message ||
+        "Could not create user profile. Check Supabase RLS and migrations.",
+    );
   }
 
-  return data as Profile;
+  return inserted as Profile;
+}
+
+export async function requireProfile() {
+  const user = await requireUser();
+  return ensureProfileRow(user.id, user.email);
 }
