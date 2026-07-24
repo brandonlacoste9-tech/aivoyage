@@ -16,6 +16,10 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { APP_NAME } from "@/lib/config";
 
+/** Soft full-bleed hero photo — faded under copy */
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=2000&q=80";
+
 const destinations = [
   {
     name: "Kyoto",
@@ -117,14 +121,44 @@ export default async function HomePage() {
       <main>
         {/* HERO */}
         <section className="relative overflow-hidden px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-16">
-          <div className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-[var(--lagoon)]/10 blur-3xl" />
-            <div className="absolute right-0 top-40 h-72 w-72 rounded-full bg-[var(--coral)]/15 blur-3xl" />
+          {/* Faded travel photo backdrop */}
+          <div className="pointer-events-none absolute inset-0 -z-10 hero-photo-fade">
+            <Image
+              src={HERO_IMAGE}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-[center_35%] opacity-[0.28] saturate-[0.9] contrast-[0.95] dark:opacity-[0.2] dark:saturate-[0.75]"
+            />
+            {/* Fade photo into brand sand paper so sections blend cleanly */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `
+                  linear-gradient(
+                    180deg,
+                    color-mix(in srgb, var(--background) 35%, transparent) 0%,
+                    color-mix(in srgb, var(--background) 55%, transparent) 45%,
+                    var(--background) 92%
+                  ),
+                  linear-gradient(
+                    90deg,
+                    color-mix(in srgb, var(--background) 70%, transparent) 0%,
+                    transparent 40%,
+                    transparent 60%,
+                    color-mix(in srgb, var(--background) 40%, transparent) 100%
+                  ),
+                  radial-gradient(ellipse 80% 60% at 15% 20%, rgba(15, 92, 99, 0.12), transparent 55%),
+                  radial-gradient(ellipse 50% 40% at 90% 10%, rgba(224, 122, 95, 0.1), transparent 50%)
+                `,
+              }}
+            />
           </div>
 
           <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-12 lg:gap-10">
             <div className="lg:col-span-6">
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)]/80 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--lagoon)] shadow-sm">
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)]/85 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--lagoon)] shadow-sm backdrop-blur-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--coral)]" />
                 Handcrafted by AI · Tuned by you
               </p>
@@ -133,7 +167,7 @@ export default async function HomePage() {
                 <br />
                 <span className="gradient-text italic">Start traveling.</span>
               </h1>
-              <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--muted)] [text-shadow:0_1px_0_color-mix(in_srgb,var(--background)_80%,transparent)]">
                 {APP_NAME} turns a half-formed idea into a day-by-day itinerary
                 with real places, a map, weather, and budget — then lets you
                 refine it in conversation until it feels like{" "}

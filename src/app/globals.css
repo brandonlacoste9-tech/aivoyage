@@ -91,6 +91,17 @@ body {
     radial-gradient(ellipse 60% 40% at 50% 100%, rgba(196, 163, 90, 0.08), transparent 50%);
 }
 
+/* Soft wash used over hero photography */
+.hero-photo-fade {
+  mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black 55%,
+    transparent 100%
+  );
+}
+
 .dark .bg-paper {
   background-image:
     radial-gradient(ellipse 120% 80% at 10% -10%, rgba(61, 184, 193, 0.12), transparent 50%),
