@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 import { isAiConfigured } from "@/lib/config";
 import { daysBetween } from "@/lib/utils";
-import type { TripPreferences } from "@/lib/types";
+import type { TripCity, TripPreferences } from "@/lib/types";
 import {
   itinerarySchema,
   parseItineraryLoose,
@@ -94,17 +94,21 @@ export async function generateItinerary(input: {
   endDate: string;
   budgetCents: number | null;
   preferences: TripPreferences;
+  cities?: TripCity[];
 }): Promise<GeneratedItinerary> {
   // Cap length so serverless functions finish before platform timeouts
-  const dayCount = Math.min(daysBetween(input.startDate, input.endDate), 7);
+  const dayCount = Math.min(daysBetween(input.startDate, input.endDate), 10);
   const model = getPlanningModel();
+  const multi =
+    (input.cities && input.cities.length > 1) ||
+    !!input.preferences.multiCity;
 
   if (!model || !isAiConfigured()) {
-    console.warn("[voyageai] AI not configured — using mock itinerary");
+    console.warn("[trip-planner] AI not configured — using mock itinerary");
     return mockItinerary(input);
   }
 
-  const system = buildGenerateSystemPrompt();
+  const system = buildGenerateSystemPrompt(multi);
   const prompt = buildGenerateUserPrompt({ ...input, dayCount });
   const provider = getAiProviderLabel();
 

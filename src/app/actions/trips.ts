@@ -46,27 +46,60 @@ export async function createTripAction(
     .filter(Boolean);
   const prompt = String(formData.get("prompt") || "").trim();
 
-  if (!destination || !startDate || !endDate) {
+  const origin = String(formData.get("origin") || "").trim();
+  const vibeFromPhoto = String(formData.get("vibe_from_photo") || "").trim();
+  let cities: { name: string; nights: number; order: number }[] = [];
+  try {
+    const raw = String(formData.get("cities") || "[]");
+    const parsed = JSON.parse(raw) as { name: string; nights: number }[];
+    if (Array.isArray(parsed) && parsed.length) {
+      cities = parsed
+        .filter((c) => c.name?.trim())
+        .map((c, i) => ({
+          name: c.name.trim(),
+          nights: Math.max(1, Number(c.nights) || 2),
+          order: i + 1,
+        }));
+    }
+  } catch {
+    cities = [];
+  }
+
+  if ((!destination && cities.length === 0) || !startDate || !endDate) {
     return { ok: false, error: "Destination and dates are required." };
   }
+
+  // Multi-city destination label: "Tokyo → Kyoto → Osaka"
+  const destinationLabel =
+    cities.length > 1
+      ? cities.map((c) => c.name).join(" → ")
+      : destination || cities[0]?.name || "";
 
   const preferences: TripPreferences = {
     pace,
     travelers,
     interests,
     prompt: prompt || undefined,
+    origin: origin || undefined,
+    vibeFromPhoto: vibeFromPhoto || undefined,
+    multiCity: cities.length > 1,
   };
 
   const { data, error } = await supabase
     .from("trips")
     .insert({
       owner_id: profile.id,
-      title,
-      destination,
+      title:
+        title ||
+        (cities.length > 1
+          ? `${cities.map((c) => c.name).join(" → ")} trip`
+          : `${destination} Trip`),
+      destination: destinationLabel,
       start_date: startDate,
       end_date: endDate,
       budget_cents: budgetCents,
       preferences,
+      cities,
       status: "draft",
       share_token: generateShareToken(),
     })

@@ -32,6 +32,7 @@ export const activitySchema = z.object({
 export const daySchema = z.object({
   day_number: z.coerce.number().int().positive(),
   summary: z.string().default(""),
+  city: z.string().optional(),
   activities: z.array(activitySchema).min(1).max(10),
 });
 
@@ -57,6 +58,7 @@ export function parseItineraryLoose(raw: unknown): GeneratedItinerary {
     days: daysIn.map((d: Record<string, unknown>, i: number) => ({
       day_number: Number(d?.day_number ?? i + 1) || i + 1,
       summary: String(d?.summary || `Day ${i + 1}`),
+      city: d?.city ? String(d.city) : undefined,
       activities: (Array.isArray(d?.activities) ? d.activities : []).map(
         (a: Record<string, unknown>) => ({
           title: String(a?.title || "Activity"),

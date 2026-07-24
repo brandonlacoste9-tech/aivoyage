@@ -38,8 +38,16 @@ export interface Trip {
   error_message: string | null;
   notes: string | null;
   packing_list?: unknown;
+  /** Structured multi-city legs: [{ name, nights, order }] */
+  cities?: TripCity[];
   created_at: string;
   updated_at: string;
+}
+
+export interface TripCity {
+  name: string;
+  nights: number;
+  order: number;
 }
 
 export interface TripPreferences {
@@ -48,6 +56,9 @@ export interface TripPreferences {
   travelers?: number;
   style?: string;
   prompt?: string;
+  origin?: string;
+  vibeFromPhoto?: string;
+  multiCity?: boolean;
 }
 
 export interface Day {
@@ -56,6 +67,7 @@ export interface Day {
   date: string;
   day_order: number;
   notes: string | null;
+  city?: string | null;
 }
 
 export interface Activity {

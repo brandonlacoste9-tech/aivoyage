@@ -5,20 +5,27 @@ export const metadata = { title: "New trip" };
 export default async function NewTripPage({
   searchParams,
 }: {
-  searchParams: Promise<{ prompt?: string; destination?: string }>;
+  searchParams: Promise<{
+    prompt?: string;
+    destination?: string;
+    vibe?: string;
+  }>;
 }) {
   const params = await searchParams;
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">New trip</h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Tell us the basics — AI builds the day-by-day plan
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          New trip
+        </h1>
+        <p className="text-[var(--muted)]">
+          Single city or multi-city — AI builds the day-by-day plan
         </p>
       </div>
       <TripWizard
         defaultDestination={params.destination ?? ""}
         defaultPrompt={params.prompt ?? ""}
+        defaultVibe={params.vibe ?? ""}
       />
     </div>
   );

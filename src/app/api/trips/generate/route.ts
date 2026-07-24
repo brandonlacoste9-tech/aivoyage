@@ -114,12 +114,18 @@ export async function POST(req: Request) {
     }
 
     const preferences = (trip.preferences || {}) as TripPreferences;
+    const cities = (Array.isArray(trip.cities) ? trip.cities : []) as {
+      name: string;
+      nights: number;
+      order: number;
+    }[];
     const itinerary = await generateItinerary({
       destination: trip.destination,
       startDate: trip.start_date,
       endDate: trip.end_date,
       budgetCents: trip.budget_cents,
       preferences,
+      cities,
     });
 
     // Clear previous days
@@ -137,6 +143,12 @@ export async function POST(req: Request) {
       const date = new Date(start);
       date.setDate(start.getDate() + (day.day_number - 1));
       const dateStr = date.toISOString().slice(0, 10);
+      const cityName =
+        day.city ||
+        cities.find((c) => c.order === day.day_number)?.name ||
+        cities[0]?.name ||
+        trip.destination.split(/→|->/)[0]?.trim() ||
+        trip.destination;
 
       const { data: dayRow, error: dayErr } = await supabase
         .from("days")
@@ -145,6 +157,7 @@ export async function POST(req: Request) {
           date: dateStr,
           day_order: day.day_number,
           notes: day.summary,
+          city: cityName,
         })
         .select("id")
         .single();
@@ -154,7 +167,7 @@ export async function POST(req: Request) {
       }
 
       const activityRows = day.activities.map((a, i) => {
-        const fb = fallbackCoords(trip.destination, activityIndex++);
+        const fb = fallbackCoords(cityName, activityIndex++);
         return {
           day_id: dayRow.id,
           title: a.title,

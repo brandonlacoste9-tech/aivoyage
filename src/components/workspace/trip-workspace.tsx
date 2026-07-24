@@ -26,6 +26,8 @@ import { ActivityList } from "@/components/workspace/activity-list";
 import { AIChat } from "@/components/workspace/ai-chat";
 import { BudgetChart } from "@/components/workspace/budget-chart";
 import { PackingPanel } from "@/components/workspace/packing-panel";
+import { BookingPanel } from "@/components/workspace/booking-panel";
+import { PresenceBar } from "@/components/workspace/presence-bar";
 import { MapView } from "@/components/workspace/map-view";
 import { WeatherPanel } from "@/components/workspace/weather-panel";
 import { PaywallModal } from "@/components/paywall-modal";
@@ -38,10 +40,12 @@ export function TripWorkspace({
   trip,
   weather,
   currentUserId,
+  displayName,
 }: {
   trip: TripWithDetails;
   weather: WeatherDay[] | null;
   currentUserId: string;
+  displayName?: string;
 }) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
@@ -174,6 +178,11 @@ export function TripWorkspace({
   return (
     <div className="flex h-[calc(100dvh-5.5rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
       <PaywallModal open={paywall} onClose={() => setPaywall(false)} />
+      <PresenceBar
+        tripId={trip.id}
+        userId={currentUserId}
+        displayName={displayName || "Traveler"}
+      />
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
         <div className="min-w-0">
@@ -295,6 +304,11 @@ export function TripWorkspace({
                 }`}
               >
                 Day {i + 1}
+                {d.city ? (
+                  <span className="mt-0.5 block text-[10px] font-normal opacity-80">
+                    {d.city}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
@@ -365,6 +379,9 @@ export function TripWorkspace({
               <TabsTrigger value="pack" className="flex-1 text-xs">
                 Pack
               </TabsTrigger>
+              <TabsTrigger value="book" className="flex-1 text-xs">
+                Book
+              </TabsTrigger>
               <TabsTrigger value="people" className="flex-1 text-xs">
                 People
               </TabsTrigger>
@@ -387,6 +404,9 @@ export function TripWorkspace({
                 weather={weather}
                 canEdit={isOwner}
               />
+            </TabsContent>
+            <TabsContent value="book" className="overflow-y-auto">
+              <BookingPanel trip={trip} />
             </TabsContent>
             <TabsContent value="people" className="overflow-y-auto">
               <CollaboratorsPanel tripId={trip.id} isOwner={isOwner} />

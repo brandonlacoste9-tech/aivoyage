@@ -39,7 +39,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/settings") ||
     path.startsWith("/billing") ||
     path.startsWith("/explore") ||
-    path.startsWith("/favorites");
+    path.startsWith("/favorites") ||
+    path.startsWith("/plan");
 
   if (!user && isAppRoute) {
     const redirectUrl = request.nextUrl.clone();
