@@ -52,7 +52,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Feature |
 |----------|---------|
-| `ANTHROPIC_API_KEY` | Real AI itineraries + chat |
+| `XAI_API_KEY` | Real AI itineraries + chat (Grok, preferred) |
+| `ANTHROPIC_API_KEY` | Claude fallback if no xAI key |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` / `MAPBOX_ACCESS_TOKEN` | Map |
 | `WEATHER_API_KEY` | Weather panel |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_PRICE_PRO` | Billing |
