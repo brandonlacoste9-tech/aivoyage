@@ -5,7 +5,7 @@ export function buildTripIcs(trip: TripWithDetails): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//VoyageAI//EN",
+    "PRODID:-//TripPlanner//trip-planner.co//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];
@@ -16,7 +16,7 @@ export function buildTripIcs(trip: TripWithDetails): string {
       const start = (a.start_time || "10:00").replace(":", "");
       const duration = a.duration_min || 90;
       const end = addMinutes(start, duration);
-      const uid = `${a.id}@voyageai`;
+      const uid = `${a.id}@trip-planner.co`;
       const desc = (a.description || "").replace(/\n/g, "\\n");
       lines.push(
         "BEGIN:VEVENT",

@@ -18,7 +18,7 @@ export default async function PrintTripPage({
       <main className="mx-auto max-w-3xl px-6 py-10 print:px-0 print:py-4">
         <header className="border-b border-slate-200 pb-6">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
-            VoyageAI itinerary
+            Trip Planner itinerary
           </p>
           <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight">
             {trip.title}
@@ -107,7 +107,8 @@ export default async function PrintTripPage({
         ) : null}
 
         <footer className="mt-12 border-t border-slate-200 pt-4 text-center text-xs text-slate-400 print:mt-8">
-          Planned with VoyageAI · {new Date().toLocaleDateString()}
+          Planned with Trip Planner · trip-planner.co ·{" "}
+          {new Date().toLocaleDateString()}
         </footer>
       </main>
     </div>

@@ -1,7 +1,7 @@
 import type { TripPreferences } from "@/lib/types";
 
 export function buildGenerateSystemPrompt() {
-  return `You are VoyageAI, an expert travel planner. Create realistic, day-by-day itineraries with real-feeling place names and practical timing.
+  return `You are Trip Planner, an expert travel planner for trip-planner.co. Create realistic, day-by-day itineraries with real-feeling place names and practical timing.
 
 Rules:
 - Prefer walkable clusters per day; avoid unrealistic multi-city hops.
@@ -44,7 +44,7 @@ Return a complete structured itinerary with exactly ${input.dayCount} days.`;
 }
 
 export function buildChatSystemPrompt(itineraryJson: string) {
-  return `You are VoyageAI trip assistant. Help the traveler refine their itinerary conversationally.
+  return `You are the Trip Planner assistant on trip-planner.co. Help the traveler refine their itinerary conversationally.
 
 Current itinerary JSON:
 ${itineraryJson}

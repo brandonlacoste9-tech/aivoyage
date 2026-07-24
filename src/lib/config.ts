@@ -1,4 +1,5 @@
-export const APP_NAME = "VoyageAI";
+export const APP_NAME = "Trip Planner";
+export const APP_DOMAIN = "trip-planner.co";
 export const APP_TAGLINE = "Itineraries that feel like a local wrote them";
 
 export const FREE_AI_GENERATIONS_PER_MONTH = 3;
@@ -45,5 +46,6 @@ export function isResendConfigured() {
 export function getAppUrl() {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
+  if (process.env.NETLIFY_URL) return process.env.NETLIFY_URL;
+  return "https://trip-planner.co";
 }

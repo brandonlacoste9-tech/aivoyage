@@ -15,7 +15,7 @@ export function AIChat({ tripId }: { tripId: string }) {
     {
       role: "assistant",
       content:
-        "Hi — I'm your VoyageAI co-pilot. Ask me to slow a day, swap restaurants, or suggest nightlife.",
+        "Hi — I'm your Trip Planner co-pilot. Ask me to slow a day, swap restaurants, or suggest nightlife.",
     },
   ]);
   const [input, setInput] = useState("");

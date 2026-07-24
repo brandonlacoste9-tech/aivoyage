@@ -23,7 +23,7 @@ export default async function InvitePage({
           You&apos;re invited to collaborate
         </h1>
         <p className="mt-3 text-sm text-[var(--muted)]">
-          Accept to open this shared itinerary in your VoyageAI workspace.
+          Accept to open this shared itinerary in your Trip Planner workspace.
         </p>
 
         {user ? (

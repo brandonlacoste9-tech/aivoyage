@@ -51,7 +51,7 @@ function BillingInner() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
         <p className="text-slate-600 dark:text-slate-400">
-          Manage your VoyageAI subscription
+          Manage your Trip Planner subscription
         </p>
       </div>
 
