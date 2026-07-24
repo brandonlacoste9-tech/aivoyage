@@ -13,7 +13,11 @@ import {
 import { toast } from "sonner";
 import type { TripWithDetails, WeatherDay } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { ensureShareTokenAction } from "@/app/actions/trips";
+import {
+  ensureShareTokenAction,
+  markTripReadyAction,
+  updateTripNotesAction,
+} from "@/app/actions/trips";
 import { ActivityCard } from "@/components/workspace/activity-card";
 import { AIChat } from "@/components/workspace/ai-chat";
 import { BudgetPanel } from "@/components/workspace/budget-panel";
@@ -23,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { updateTripNotesAction } from "@/app/actions/trips";
 
 export function TripWorkspace({
   trip,
@@ -41,6 +44,11 @@ export function TripWorkspace({
   const [mobileTab, setMobileTab] = useState("itinerary");
 
   const activeDay = trip.days.find((d) => d.id === dayId) ?? trip.days[0];
+  const hasItinerary = trip.days.some((d) => d.activities.length > 0);
+  // Don't treat as stuck-generating if we already have activities
+  const displayStatus =
+    trip.status === "generating" && hasItinerary ? "ready" : trip.status;
+  const stuckGenerating = trip.status === "generating" && hasItinerary;
 
   const mapActivities = useMemo(
     () =>
@@ -99,6 +107,17 @@ export function TripWorkspace({
     });
   }
 
+  function markReady() {
+    startTransition(async () => {
+      const res = await markTripReadyAction(trip.id);
+      if (!res.ok) toast.error(res.error);
+      else {
+        toast.success("Marked ready");
+        router.refresh();
+      }
+    });
+  }
+
   return (
     <div className="flex h-[calc(100vh-2rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
       {/* Top bar */}
@@ -106,7 +125,17 @@ export function TripWorkspace({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="truncate text-xl font-bold">{trip.title}</h1>
-            <Badge variant="secondary">{trip.status}</Badge>
+            <Badge
+              variant={
+                displayStatus === "ready"
+                  ? "success"
+                  : displayStatus === "failed"
+                    ? "warning"
+                    : "secondary"
+              }
+            >
+              {displayStatus}
+            </Badge>
           </div>
           <p className="text-sm text-slate-500">
             {trip.destination} · {formatDate(trip.start_date)} –{" "}
@@ -137,16 +166,42 @@ export function TripWorkspace({
         </div>
       </div>
 
-      {trip.status === "failed" && trip.error_message ? (
+      {trip.error_message ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-          Generation failed: {trip.error_message}
+          <p className="font-medium">Note</p>
+          <p className="mt-0.5">{trip.error_message}</p>
+          {hasItinerary ? (
+            <p className="mt-1 text-xs opacity-80">
+              Your itinerary was saved — you can ignore this if days look good.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
-      {trip.status === "generating" ? (
+      {stuckGenerating ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
+          <p>
+            Itinerary is ready ({trip.days.length} days) — status was stuck on
+            “generating”.
+          </p>
+          <Button size="sm" variant="outline" onClick={markReady} disabled={pending}>
+            Mark as ready
+          </Button>
+        </div>
+      ) : null}
+
+      {trip.status === "generating" && !hasItinerary ? (
         <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-100">
           <Loader2 className="h-4 w-4 animate-spin" />
           Generating itinerary…
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => router.refresh()}
+          >
+            Refresh
+          </Button>
         </div>
       ) : null}
 

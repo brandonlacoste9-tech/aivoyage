@@ -7,18 +7,44 @@ import {
   ensureCreditsReset,
   incrementGeneration,
 } from "@/lib/credits";
-import { fallbackCoords, geocodePlace } from "@/lib/mapbox";
+import { fallbackCoords } from "@/lib/mapbox";
 import type { TripPreferences } from "@/lib/types";
 import { isAiConfigured, isSupabaseConfigured } from "@/lib/config";
 import { getAiProviderLabel } from "@/lib/ai/model";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Netlify / Vercel: allow longer AI runs (plan-dependent cap applies)
 export const maxDuration = 60;
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+async function setTripStatus(
+  supabase: SupabaseClient,
+  tripId: string,
+  ownerId: string,
+  patch: Record<string, unknown>,
+) {
+  const { data, error } = await supabase
+    .from("trips")
+    .update(patch)
+    .eq("id", tripId)
+    .eq("owner_id", ownerId)
+    .select("id, status")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Trip update failed: ${error.message}`);
+  }
+  if (!data) {
+    throw new Error("Trip update affected 0 rows (check RLS / ownership)");
+  }
+  return data;
+}
+
 export async function POST(req: Request) {
   let tripIdForError: string | undefined;
+  let ownerIdForError: string | undefined;
+  let wroteItinerary = false;
+
   try {
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
@@ -49,10 +75,11 @@ export async function POST(req: Request) {
     }
 
     let profile = await ensureProfileRow(user.id, user.email);
+    ownerIdForError = profile.id;
     try {
       profile = await ensureCreditsReset(supabase, profile);
     } catch {
-      // non-fatal if reset fails
+      /* non-fatal */
     }
 
     const gate = canGenerate(profile);
@@ -77,10 +104,10 @@ export async function POST(req: Request) {
       );
     }
 
-    await supabase
-      .from("trips")
-      .update({ status: "generating", error_message: null })
-      .eq("id", tripId);
+    await setTripStatus(supabase, tripId, profile.id, {
+      status: "generating",
+      error_message: null,
+    });
 
     if (!isAiConfigured()) {
       console.warn("[generate] XAI_API_KEY missing in runtime env");
@@ -95,7 +122,12 @@ export async function POST(req: Request) {
       preferences,
     });
 
-    await supabase.from("days").delete().eq("trip_id", tripId);
+    // Clear previous days
+    const { error: delErr } = await supabase
+      .from("days")
+      .delete()
+      .eq("trip_id", tripId);
+    if (delErr) throw new Error(`Clear days failed: ${delErr.message}`);
 
     const start = new Date(trip.start_date + "T12:00:00");
     let activityIndex = 0;
@@ -121,92 +153,77 @@ export async function POST(req: Request) {
         throw new Error(dayErr?.message || "Failed to insert day");
       }
 
-      const activityRows = [];
-      for (let i = 0; i < day.activities.length; i++) {
-        const a = day.activities[i];
-        let lat = a.lat ?? null;
-        let lng = a.lng ?? null;
-
-        // Only geocode when Mapbox is configured — skip network otherwise
-        if ((lat == null || lng == null) && process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
-          try {
-            const geo = await geocodePlace(a.title, trip.destination);
-            if (geo) {
-              lat = geo.lat;
-              lng = geo.lng;
-            }
-          } catch {
-            /* ignore */
-          }
-        }
-        if (lat == null || lng == null) {
-          const fb = fallbackCoords(trip.destination, activityIndex);
-          lat = fb.lat;
-          lng = fb.lng;
-        }
-        activityIndex += 1;
-
-        activityRows.push({
+      const activityRows = day.activities.map((a, i) => {
+        const fb = fallbackCoords(trip.destination, activityIndex++);
+        return {
           day_id: dayRow.id,
           title: a.title,
-          description: a.description,
+          description: a.description ?? "",
           type: a.type,
-          start_time: a.start_time,
-          duration_min: a.duration_min,
-          cost_cents: a.cost_cents,
-          lat,
-          lng,
+          start_time: a.start_time ?? "10:00",
+          duration_min: a.duration_min ?? 90,
+          cost_cents: a.cost_cents ?? 0,
+          lat: a.lat ?? fb.lat,
+          lng: a.lng ?? fb.lng,
           address: a.address ?? null,
           sort_order: i,
-        });
-      }
+        };
+      });
 
       if (activityRows.length) {
         const { error: actErr } = await supabase
           .from("activities")
           .insert(activityRows);
-        if (actErr) throw new Error(actErr.message);
+        if (actErr) throw new Error(`Activity insert failed: ${actErr.message}`);
         totalActivities += activityRows.length;
       }
     }
 
-    // Seed expenses
-    const { data: allDays } = await supabase
-      .from("days")
-      .select("id")
-      .eq("trip_id", tripId);
-    const dayIds = (allDays ?? []).map((d) => d.id);
-    if (dayIds.length) {
-      const { data: acts } = await supabase
-        .from("activities")
-        .select("id, cost_cents, type, title")
-        .in("day_id", dayIds);
-      const expenses = (acts ?? [])
-        .filter((a) => (a.cost_cents ?? 0) > 0)
-        .map((a) => ({
-          trip_id: tripId,
-          activity_id: a.id,
-          amount_cents: a.cost_cents,
-          category: a.type,
-          note: a.title,
-        }));
-      if (expenses.length) {
-        await supabase.from("expenses").delete().eq("trip_id", tripId);
-        await supabase.from("expenses").insert(expenses);
-      }
-    }
+    wroteItinerary = totalActivities > 0 || itinerary.days.length > 0;
 
+    // Mark ready ASAP so UI never stays stuck on "generating"
     const overview = `${itinerary.overview}\n\n— Planned with ${getAiProviderLabel()}`;
+    await setTripStatus(supabase, tripId, profile.id, {
+      status: "ready",
+      title: itinerary.title || trip.title,
+      notes: overview,
+      error_message: null,
+    });
 
-    await supabase
-      .from("trips")
-      .update({
-        status: "ready",
-        title: itinerary.title || trip.title,
-        notes: overview,
-        error_message: null,
-      })
-      .eq("id", tripId);
+    // Best-effort expenses (must not leave trip stuck)
+    try {
+      const { data: allDays } = await supabase
+        .from("days")
+        .select("id")
+        .eq("trip_id", tripId);
+      const dayIds = (allDays ?? []).map((d) => d.id);
+      if (dayIds.length) {
+        const { data: acts } = await supabase
+          .from("activities")
+          .select("id, cost_cents, type, title")
+          .in("day_id", dayIds);
+        const expenses = (acts ?? [])
+          .filter((a) => (a.cost_cents ?? 0) > 0)
+          .map((a) => ({
+            trip_id: tripId,
+            activity_id: a.id,
+            amount_cents: a.cost_cents,
+            category: a.type,
+            note: a.title,
+          }));
+        if (expenses.length) {
+          await supabase.from("expenses").delete().eq("trip_id", tripId);
+          const { error: expErr } = await supabase
+            .from("expenses")
+            .insert(expenses);
+          if (expErr) {
+            console.warn("[generate] expenses insert:", expErr.message);
+          }
+        }
+      }
+    } catch (exp) {
+      console.warn("[generate] expenses skipped:", exp);
+    }
 
     if (profile.plan !== "pro") {
       try {
@@ -221,6 +238,7 @@ export async function POST(req: Request) {
       days: itinerary.days.length,
       activities: totalActivities,
       provider: getAiProviderLabel(),
+      status: "ready",
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Generation failed";
@@ -229,12 +247,25 @@ export async function POST(req: Request) {
     if (tripIdForError && isSupabaseConfigured()) {
       try {
         const supabase = await createClient();
-        await supabase
-          .from("trips")
-          .update({ status: "failed", error_message: message })
-          .eq("id", tripIdForError);
-      } catch {
-        /* ignore */
+        // If we already wrote days, force ready so the trip isn't stuck
+        if (wroteItinerary && ownerIdForError) {
+          await setTripStatus(supabase, tripIdForError, ownerIdForError, {
+            status: "ready",
+            error_message: `Completed with warnings: ${message}`,
+          });
+        } else if (ownerIdForError) {
+          await setTripStatus(supabase, tripIdForError, ownerIdForError, {
+            status: "failed",
+            error_message: message,
+          });
+        } else {
+          await supabase
+            .from("trips")
+            .update({ status: "failed", error_message: message })
+            .eq("id", tripIdForError);
+        }
+      } catch (err2) {
+        console.error("[generate] status recovery failed", err2);
       }
     }
 

@@ -13,9 +13,14 @@ export type ActionResult<T = void> =
   | { ok: true; data?: T }
   | { ok: false; error: string };
 
-export async function createTripAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
+export async function createTripAction(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
   if (!isSupabaseConfigured()) {
-    return { ok: false, error: "Supabase is not configured. Add env vars from .env.example." };
+    return {
+      ok: false,
+      error: "Supabase is not configured. Add env vars from .env.example.",
+    };
   }
 
   const profile = await requireProfile();
@@ -27,9 +32,12 @@ export async function createTripAction(formData: FormData): Promise<ActionResult
   const destination = String(formData.get("destination") || "").trim();
   const startDate = String(formData.get("start_date") || "");
   const endDate = String(formData.get("end_date") || "");
-  const title = String(formData.get("title") || "").trim() || `${destination} Trip`;
+  const title =
+    String(formData.get("title") || "").trim() || `${destination} Trip`;
   const budgetRaw = String(formData.get("budget") || "").trim();
-  const budgetCents = budgetRaw ? Math.round(parseFloat(budgetRaw) * 100) : null;
+  const budgetCents = budgetRaw
+    ? Math.round(parseFloat(budgetRaw) * 100)
+    : null;
   const pace = String(formData.get("pace") || "balanced") as TripPreferences["pace"];
   const travelers = parseInt(String(formData.get("travelers") || "2"), 10) || 2;
   const interests = String(formData.get("interests") || "")
@@ -72,12 +80,65 @@ export async function createTripAction(formData: FormData): Promise<ActionResult
   return { ok: true, data: { id: data.id } };
 }
 
+/**
+ * If a trip is stuck on "generating" but already has days, mark it ready.
+ * Called when opening the trip workspace.
+ */
+export async function healStuckTripAction(tripId: string): Promise<{
+  healed: boolean;
+  status: string;
+}> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("id, status, owner_id")
+    .eq("id", tripId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  if (!trip) return { healed: false, status: "missing" };
+
+  if (trip.status !== "generating" && trip.status !== "failed") {
+    return { healed: false, status: trip.status };
+  }
+
+  const { count } = await supabase
+    .from("days")
+    .select("*", { count: "exact", head: true })
+    .eq("trip_id", tripId);
+
+  if ((count ?? 0) > 0) {
+    const { error } = await supabase
+      .from("trips")
+      .update({
+        status: "ready",
+        error_message: null,
+      })
+      .eq("id", tripId)
+      .eq("owner_id", user.id);
+
+    if (!error) {
+      revalidatePath(`/trips/${tripId}`);
+      revalidatePath("/trips");
+      revalidatePath("/dashboard");
+      return { healed: true, status: "ready" };
+    }
+  }
+
+  return { healed: false, status: trip.status };
+}
+
 export async function getTripWithDetails(
   tripId: string,
 ): Promise<TripWithDetails | null> {
   if (!isSupabaseConfigured()) return null;
   const user = await requireUser();
   const supabase = await createClient();
+
+  // Auto-heal stuck generating trips that already have content
+  await healStuckTripAction(tripId);
 
   const { data: trip, error } = await supabase
     .from("trips")
@@ -125,6 +186,20 @@ export async function listTripsAction() {
   if (!isSupabaseConfigured()) return [];
   const user = await requireUser();
   const supabase = await createClient();
+
+  // Heal any stuck generating trips that already have days
+  const { data: stuck } = await supabase
+    .from("trips")
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("status", "generating");
+
+  if (stuck?.length) {
+    for (const t of stuck) {
+      await healStuckTripAction(t.id);
+    }
+  }
+
   const { data } = await supabase
     .from("trips")
     .select("*")
@@ -146,6 +221,22 @@ export async function updateTripNotesAction(
     .eq("owner_id", user.id);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/trips/${tripId}`);
+  return { ok: true };
+}
+
+export async function markTripReadyAction(
+  tripId: string,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("trips")
+    .update({ status: "ready", error_message: null })
+    .eq("id", tripId)
+    .eq("owner_id", user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/trips/${tripId}`);
+  revalidatePath("/trips");
   return { ok: true };
 }
 
