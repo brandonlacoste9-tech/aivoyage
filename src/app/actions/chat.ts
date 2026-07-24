@@ -1,10 +1,10 @@
 "use server";
 
 import { generateText } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { requireUser } from "@/lib/auth";
-import { isAnthropicConfigured } from "@/lib/config";
+import { isAiConfigured } from "@/lib/config";
 import { buildChatSystemPrompt } from "@/lib/ai/prompts";
+import { getAiProviderLabel, getPlanningModel } from "@/lib/ai/model";
 import { getTripWithDetails } from "@/app/actions/trips";
 
 export async function chatAboutTripText(
@@ -18,12 +18,13 @@ export async function chatAboutTripText(
       return { ok: false, error: "Trip not found" };
     }
 
-    if (!isAnthropicConfigured()) {
+    const model = getPlanningModel();
+    if (!model || !isAiConfigured()) {
       return {
         ok: true,
         text: `I'd love to help refine **${trip.title}** in ${trip.destination}!
 
-*(Demo mode — add \`ANTHROPIC_API_KEY\` for live Claude chat.)*
+*(Demo mode — add \`XAI_API_KEY\` for live Grok chat, or \`ANTHROPIC_API_KEY\` for Claude.)*
 
 You said: "${message}"
 
@@ -56,7 +57,7 @@ Tell me which day to change, or ask for more food / slower pace / nightlife.`,
     );
 
     const { text } = await generateText({
-      model: anthropic("claude-sonnet-4-5"),
+      model,
       system: buildChatSystemPrompt(itineraryJson),
       prompt: message,
     });
@@ -65,7 +66,7 @@ Tell me which day to change, or ask for more food / slower pace / nightlife.`,
   } catch (e) {
     return {
       ok: false,
-      error: e instanceof Error ? e.message : "Chat failed",
+      error: e instanceof Error ? e.message : `Chat failed (${getAiProviderLabel()})`,
     };
   }
 }

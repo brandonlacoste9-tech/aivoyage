@@ -1,6 +1,5 @@
 import { generateText, Output } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
-import { isAnthropicConfigured } from "@/lib/config";
+import { isAiConfigured } from "@/lib/config";
 import { daysBetween } from "@/lib/utils";
 import type { TripPreferences } from "@/lib/types";
 import {
@@ -11,6 +10,7 @@ import {
   buildGenerateSystemPrompt,
   buildGenerateUserPrompt,
 } from "@/lib/ai/prompts";
+import { getAiProviderLabel, getPlanningModel } from "@/lib/ai/model";
 
 function mockItinerary(input: {
   destination: string;
@@ -71,7 +71,7 @@ function mockItinerary(input: {
 
   return {
     title: `${input.destination} Escape`,
-    overview: `A curated ${count}-day journey through ${input.destination}, generated in demo mode (no ANTHROPIC_API_KEY). Connect Claude for richer place-specific plans.`,
+    overview: `A curated ${count}-day journey through ${input.destination}, generated in demo mode (no XAI_API_KEY / ANTHROPIC_API_KEY). Add a Grok or Claude key for place-specific plans.`,
     days,
   };
 }
@@ -84,20 +84,21 @@ export async function generateItinerary(input: {
   preferences: TripPreferences;
 }): Promise<GeneratedItinerary> {
   const dayCount = daysBetween(input.startDate, input.endDate);
+  const model = getPlanningModel();
 
-  if (!isAnthropicConfigured()) {
+  if (!model || !isAiConfigured()) {
     return mockItinerary(input);
   }
 
   const { output } = await generateText({
-    model: anthropic("claude-sonnet-4-5"),
+    model,
     system: buildGenerateSystemPrompt(),
     prompt: buildGenerateUserPrompt({ ...input, dayCount }),
     output: Output.object({ schema: itinerarySchema }),
   });
 
   if (!output) {
-    throw new Error("AI returned empty itinerary");
+    throw new Error(`AI (${getAiProviderLabel()}) returned empty itinerary`);
   }
 
   return output;

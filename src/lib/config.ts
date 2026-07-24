@@ -11,8 +11,17 @@ export function isSupabaseConfigured() {
   );
 }
 
+export function isXaiConfigured() {
+  return Boolean(process.env.XAI_API_KEY);
+}
+
 export function isAnthropicConfigured() {
   return Boolean(process.env.ANTHROPIC_API_KEY);
+}
+
+/** True if any real LLM key is present (Grok preferred at runtime). */
+export function isAiConfigured() {
+  return isXaiConfigured() || isAnthropicConfigured();
 }
 
 export function isMapboxConfigured() {

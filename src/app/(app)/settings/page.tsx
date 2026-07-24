@@ -12,7 +12,9 @@ import {
   isMapboxConfigured,
   isStripeConfigured,
   isWeatherConfigured,
+  isXaiConfigured,
 } from "@/lib/config";
+import { getAiProviderLabel } from "@/lib/ai/model";
 
 export const metadata = { title: "Settings" };
 
@@ -21,11 +23,13 @@ export default async function SettingsPage() {
   const profile = await requireProfile();
 
   const integrations = [
-    { name: "Anthropic (AI)", ok: isAnthropicConfigured() },
+    { name: "xAI Grok (primary AI)", ok: isXaiConfigured() },
+    { name: "Anthropic Claude (fallback)", ok: isAnthropicConfigured() },
     { name: "Mapbox", ok: isMapboxConfigured() },
     { name: "WeatherAPI", ok: isWeatherConfigured() },
     { name: "Stripe", ok: isStripeConfigured() },
   ];
+  const activeAi = getAiProviderLabel();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -66,7 +70,8 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle>Integrations</CardTitle>
           <CardDescription>
-            Optional APIs degrade gracefully when keys are missing
+            Active AI provider: <strong>{activeAi}</strong>. Optional APIs
+            degrade gracefully when keys are missing.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
