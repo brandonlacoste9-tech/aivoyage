@@ -1,0 +1,30 @@
+# Netlify + Next.js (App Router)
+# Docs: https://docs.netlify.com/frameworks/next-js/overview/
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# SPA-style fallback is handled by the Next.js runtime plugin.
+# Do not add a catch-all redirect to index.html for this app.
+
+# Optional: longer function timeout for AI generation (Pro plans support higher)
+[functions]
+  node_bundler = "esbuild"
+  # included_files is managed by the Next plugin
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
