@@ -337,6 +337,53 @@ export default async function HomePage() {
           </figure>
         </section>
 
+        {/* FAQ */}
+        <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
+          <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-[var(--lagoon)]">
+            FAQ
+          </p>
+          <h2 className="mt-3 text-center font-display text-3xl font-semibold tracking-tight">
+            Quick answers
+          </h2>
+          <div className="mt-10 space-y-3">
+            {[
+              {
+                q: "Do I need to know my whole itinerary?",
+                a: "No. One sentence is enough — destination, vibe, and dates. Grok fills the rest; you refine in chat.",
+              },
+              {
+                q: "Is the free plan actually usable?",
+                a: "Yes. A few AI generations and active trips per month — enough to plan real getaways before upgrading.",
+              },
+              {
+                q: "Can I share with friends who don’t have an account?",
+                a: "Yes. Generate a public link from any trip. They see the day-by-day plan; they don’t need to sign up.",
+              },
+              {
+                q: "What’s on the map?",
+                a: "Each activity gets a pin. Click for a photo (when available) and details. Weather and budget live in the side panel.",
+              },
+            ].map((item) => (
+              <details
+                key={item.q}
+                className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] px-5 py-4 open:shadow-sm"
+              >
+                <summary className="cursor-pointer list-none font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center justify-between gap-3">
+                    {item.q}
+                    <span className="text-[var(--muted)] transition group-open:rotate-45">
+                      +
+                    </span>
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <div className="relative overflow-hidden rounded-[2rem] bg-[var(--lagoon)] px-8 py-12 text-[var(--primary-foreground)] sm:px-14 sm:py-16">

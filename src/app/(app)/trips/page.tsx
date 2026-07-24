@@ -1,16 +1,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { listTripsAction } from "@/app/actions/trips";
-import { formatDate } from "@/lib/utils";
 import type { Trip } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { TripCard } from "@/components/trips/trip-card";
 
 export const metadata = { title: "Trips" };
 
@@ -18,15 +11,20 @@ export default async function TripsPage() {
   const trips = (await listTripsAction()) as Trip[];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Trips</h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            All your planned and draft itineraries
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--coral)]">
+            Library
+          </p>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            Your trips
+          </h1>
+          <p className="mt-1 text-[var(--muted)]">
+            Everything you&apos;ve planned — ready, draft, or regenerating
           </p>
         </div>
-        <Button asChild>
+        <Button asChild variant="accent">
           <Link href="/trips/new">
             <Plus className="h-4 w-4" />
             New trip
@@ -35,37 +33,20 @@ export default async function TripsPage() {
       </div>
 
       {trips.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No trips yet</CardTitle>
-            <CardDescription>
-              Create a trip and let AI build your first itinerary.
-            </CardDescription>
-            <div className="pt-2">
-              <Button asChild>
-                <Link href="/trips/new">Create trip</Link>
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
+        <div className="rounded-[1.75rem] border border-dashed border-[var(--border)] bg-[var(--card)] px-8 py-16 text-center">
+          <h2 className="font-display text-xl font-semibold">No trips yet</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-[var(--muted)]">
+            Describe a destination and dates — Grok builds a day-by-day itinerary
+            you can refine on the map.
+          </p>
+          <Button asChild className="mt-6" variant="accent">
+            <Link href="/trips/new">Plan your first trip</Link>
+          </Button>
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {trips.map((trip) => (
-            <Link key={trip.id} href={`/trips/${trip.id}`}>
-              <Card className="h-full transition hover:shadow-md">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base">{trip.title}</CardTitle>
-                    <Badge variant="secondary">{trip.status}</Badge>
-                  </div>
-                  <CardDescription>
-                    {trip.destination}
-                    <br />
-                    {formatDate(trip.start_date)} – {formatDate(trip.end_date)}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
+            <TripCard key={trip.id} trip={trip} />
           ))}
         </div>
       )}

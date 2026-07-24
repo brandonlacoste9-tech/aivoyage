@@ -18,6 +18,7 @@ import {
   markTripReadyAction,
   updateTripNotesAction,
 } from "@/app/actions/trips";
+import { ExportIcsButton } from "@/components/workspace/export-ics-button";
 import { ActivityCard } from "@/components/workspace/activity-card";
 import { AIChat } from "@/components/workspace/ai-chat";
 import { BudgetPanel } from "@/components/workspace/budget-panel";
@@ -143,6 +144,7 @@ export function TripWorkspace({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <ExportIcsButton trip={trip} />
           <Button variant="outline" size="sm" onClick={() => void share()}>
             <Share2 className="h-4 w-4" />
             Share
