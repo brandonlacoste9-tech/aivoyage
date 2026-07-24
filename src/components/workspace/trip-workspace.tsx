@@ -275,6 +275,7 @@ export function TripWorkspace({
             selectedId={selectedActivity}
             onSelect={setSelectedActivity}
             dark={resolvedTheme === "dark"}
+            destination={trip.destination}
           />
         </div>
 

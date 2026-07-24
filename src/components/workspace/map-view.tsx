@@ -6,13 +6,13 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import type { Activity } from "@/lib/types";
 
 const DAY_COLORS = [
-  "#4F46E5",
-  "#06B6D4",
-  "#F59E0B",
-  "#10B981",
-  "#EC4899",
-  "#8B5CF6",
-  "#EF4444",
+  "#0f5c63",
+  "#2a9d8f",
+  "#e07a5f",
+  "#c4a35a",
+  "#ec4899",
+  "#8b5cf6",
+  "#ef4444",
 ];
 
 export function MapView({
@@ -20,15 +20,18 @@ export function MapView({
   selectedId,
   onSelect,
   dark,
+  destination,
 }: {
   activities: (Activity & { dayIndex: number })[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   dark?: boolean;
+  destination?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const photoCache = useRef<Map<string, string>>(new Map());
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const hasMap = Boolean(token);
@@ -41,11 +44,14 @@ export function MapView({
       container: containerRef.current,
       style: dark
         ? "mapbox://styles/mapbox/dark-v11"
-        : "mapbox://styles/mapbox/streets-v12",
+        : "mapbox://styles/mapbox/outdoors-v12",
       center: [2.3522, 48.8566],
       zoom: 11,
     });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(
+      new mapboxgl.NavigationControl({ showCompass: false }),
+      "top-right",
+    );
     mapRef.current = map;
 
     return () => {
@@ -58,7 +64,7 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !hasMap) return;
+    if (!map || !hasMap || !token) return;
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
@@ -75,30 +81,53 @@ export function MapView({
       const el = document.createElement("button");
       el.type = "button";
       el.className = "voyage-marker";
+      el.setAttribute("aria-label", a.title);
       el.style.cssText = `
         width: 28px; height: 28px; border-radius: 9999px;
         background: ${color}; border: 2px solid white;
         box-shadow: 0 2px 8px rgba(0,0,0,.25); cursor: pointer;
-        ${selectedId === a.id ? "transform: scale(1.25); outline: 2px solid #4F46E5;" : ""}
+        ${selectedId === a.id ? "transform: scale(1.25); outline: 2px solid #0f5c63;" : ""}
       `;
       el.addEventListener("click", () => onSelect?.(a.id));
 
       const meta = [a.start_time, a.type].filter(Boolean).join(" · ");
+      const staticMap = mapboxStaticUrl(a.lng!, a.lat!, token);
+      const cachedPhoto = photoCache.current.get(a.id);
+      const imgSrc = cachedPhoto || staticMap;
+
+      const popup = new mapboxgl.Popup({
+        offset: 18,
+        closeButton: true,
+        maxWidth: "280px",
+        className: "voyage-map-popup",
+      }).setHTML(
+        buildPopupHtml({
+          title: a.title,
+          meta,
+          imgSrc,
+          imgAlt: a.title,
+          loading: !cachedPhoto,
+        }),
+      );
+
+      popup.on("open", () => {
+        void hydratePopupPhoto({
+          popup,
+          activityId: a.id,
+          title: a.title,
+          destination,
+          address: a.address,
+          lng: a.lng!,
+          lat: a.lat!,
+          token,
+          meta,
+          cache: photoCache.current,
+        });
+      });
+
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([a.lng!, a.lat!])
-        .setPopup(
-          new mapboxgl.Popup({
-            offset: 18,
-            closeButton: true,
-            maxWidth: "240px",
-            className: "voyage-map-popup",
-          }).setHTML(
-            `<span class="voyage-popup-title">${escapeHtml(a.title)}</span>` +
-              (meta
-                ? `<span class="voyage-popup-meta">${escapeHtml(meta)}</span>`
-                : ""),
-          ),
-        )
+        .setPopup(popup)
         .addTo(map);
 
       markersRef.current.push(marker);
@@ -113,7 +142,7 @@ export function MapView({
     } else {
       map.fitBounds(bounds, { padding: 48, maxZoom: 14 });
     }
-  }, [activities, selectedId, onSelect, hasMap]);
+  }, [activities, selectedId, onSelect, hasMap, token, destination]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -121,6 +150,13 @@ export function MapView({
     const a = activities.find((x) => x.id === selectedId);
     if (a?.lat != null && a?.lng != null) {
       map.flyTo({ center: [a.lng, a.lat], zoom: 14 });
+      // Open popup for selected activity
+      const idx = activities
+        .filter((x) => x.lat != null && x.lng != null)
+        .findIndex((x) => x.id === selectedId);
+      if (idx >= 0 && markersRef.current[idx]) {
+        markersRef.current[idx].togglePopup();
+      }
     }
   }, [selectedId, activities]);
 
@@ -132,16 +168,6 @@ export function MapView({
           Set <code className="text-xs">NEXT_PUBLIC_MAPBOX_TOKEN</code> to enable
           Mapbox GL markers and fly-to.
         </p>
-        <ul className="mt-2 max-h-40 w-full max-w-md space-y-1 overflow-y-auto text-left text-xs text-slate-600 dark:text-slate-400">
-          {activities
-            .filter((a) => a.lat != null)
-            .slice(0, 12)
-            .map((a) => (
-              <li key={a.id}>
-                {a.title}: {a.lat?.toFixed(3)}, {a.lng?.toFixed(3)}
-              </li>
-            ))}
-        </ul>
       </div>
     );
   }
@@ -156,6 +182,152 @@ export function MapView({
   );
 }
 
+function mapboxStaticUrl(lng: number, lat: number, token: string) {
+  const lon = Number(lng.toFixed(5));
+  const la = Number(lat.toFixed(5));
+  return `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/pin-s+e07a5f(${lon},${la})/${lon},${la},14,0/320x160@2x?access_token=${token}`;
+}
+
+function buildPopupHtml({
+  title,
+  meta,
+  imgSrc,
+  imgAlt,
+  loading,
+}: {
+  title: string;
+  meta: string;
+  imgSrc: string;
+  imgAlt: string;
+  loading?: boolean;
+}) {
+  return `
+    <div class="voyage-popup">
+      <div class="voyage-popup-media${loading ? " is-loading" : ""}">
+        <img
+          class="voyage-popup-img"
+          src="${escapeAttr(imgSrc)}"
+          alt="${escapeAttr(imgAlt)}"
+          width="320"
+          height="160"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+        />
+      </div>
+      <div class="voyage-popup-body">
+        <span class="voyage-popup-title">${escapeHtml(title)}</span>
+        ${meta ? `<span class="voyage-popup-meta">${escapeHtml(meta)}</span>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+async function hydratePopupPhoto({
+  popup,
+  activityId,
+  title,
+  destination,
+  address,
+  lng,
+  lat,
+  token,
+  meta,
+  cache,
+}: {
+  popup: mapboxgl.Popup;
+  activityId: string;
+  title: string;
+  destination?: string;
+  address?: string | null;
+  lng: number;
+  lat: number;
+  token: string;
+  meta: string;
+  cache: Map<string, string>;
+}) {
+  if (cache.has(activityId)) {
+    const el = popup.getElement();
+    const img = el?.querySelector(".voyage-popup-img") as HTMLImageElement | null;
+    const wrap = el?.querySelector(".voyage-popup-media");
+    if (img) img.src = cache.get(activityId)!;
+    wrap?.classList.remove("is-loading");
+    return;
+  }
+
+  const queries = [
+    title,
+    address || "",
+    destination ? `${title} ${destination}` : "",
+    destination || "",
+  ].filter(Boolean);
+
+  let photoUrl: string | null = null;
+  for (const q of queries) {
+    photoUrl = await fetchWikipediaThumb(q);
+    if (photoUrl) break;
+  }
+
+  const finalUrl = photoUrl || mapboxStaticUrl(lng, lat, token);
+  cache.set(activityId, finalUrl);
+
+  if (!popup.isOpen()) return;
+
+  const el = popup.getElement();
+  const img = el?.querySelector(".voyage-popup-img") as HTMLImageElement | null;
+  const wrap = el?.querySelector(".voyage-popup-media");
+  if (img) {
+    img.src = finalUrl;
+    img.onload = () => wrap?.classList.remove("is-loading");
+    img.onerror = () => {
+      img.src = mapboxStaticUrl(lng, lat, token);
+      wrap?.classList.remove("is-loading");
+    };
+  } else {
+    popup.setHTML(
+      buildPopupHtml({
+        title,
+        meta,
+        imgSrc: finalUrl,
+        imgAlt: title,
+        loading: false,
+      }),
+    );
+  }
+}
+
+async function fetchWikipediaThumb(query: string): Promise<string | null> {
+  try {
+    // Search first for best page match
+    const searchUrl = new URL("https://en.wikipedia.org/w/api.php");
+    searchUrl.searchParams.set("action", "query");
+    searchUrl.searchParams.set("list", "search");
+    searchUrl.searchParams.set("srsearch", query);
+    searchUrl.searchParams.set("srlimit", "1");
+    searchUrl.searchParams.set("format", "json");
+    searchUrl.searchParams.set("origin", "*");
+
+    const searchRes = await fetch(searchUrl.toString());
+    if (!searchRes.ok) return null;
+    const searchData = await searchRes.json();
+    const title = searchData?.query?.search?.[0]?.title as string | undefined;
+    if (!title) return null;
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+    const sumRes = await fetch(summaryUrl, {
+      headers: { Accept: "application/json" },
+    });
+    if (!sumRes.ok) return null;
+    const sum = await sumRes.json();
+    const src =
+      sum?.thumbnail?.source ||
+      sum?.originalimage?.source ||
+      null;
+    return typeof src === "string" ? src : null;
+  } catch {
+    return null;
+  }
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")
@@ -164,3 +336,6 @@ function escapeHtml(s: string) {
     .replace(/"/g, "&quot;");
 }
 
+function escapeAttr(s: string) {
+  return escapeHtml(s).replace(/'/g, "&#39;");
+}
