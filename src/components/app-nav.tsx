@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Compass,
   CreditCard,
+  Heart,
   LayoutDashboard,
   LogOut,
   Map,
@@ -22,6 +23,7 @@ const links = [
   { href: "/trips", label: "Trips", icon: Map },
   { href: "/trips/new", label: "New trip", icon: Plus },
   { href: "/explore", label: "Explore", icon: Compass },
+  { href: "/favorites", label: "Favorites", icon: Heart },
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

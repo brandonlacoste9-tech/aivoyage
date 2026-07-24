@@ -83,10 +83,11 @@ export function MapView({
       el.className = "voyage-marker";
       el.setAttribute("aria-label", a.title);
       el.style.cssText = `
-        width: 28px; height: 28px; border-radius: 9999px;
-        background: ${color}; border: 2px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,.25); cursor: pointer;
-        ${selectedId === a.id ? "transform: scale(1.25); outline: 2px solid #0f5c63;" : ""}
+        width: 34px; height: 34px; border-radius: 9999px;
+        background: ${color}; border: 2.5px solid white;
+        box-shadow: 0 2px 10px rgba(0,0,0,.3); cursor: pointer;
+        touch-action: manipulation;
+        ${selectedId === a.id ? "transform: scale(1.2); outline: 2px solid #0f5c63;" : ""}
       `;
       el.addEventListener("click", () => onSelect?.(a.id));
 
@@ -175,7 +176,7 @@ export function MapView({
   return (
     <div
       ref={containerRef}
-      className="h-full min-h-[280px] w-full rounded-2xl"
+      className="h-full min-h-[min(70dvh,560px)] w-full touch-manipulation rounded-2xl lg:min-h-[280px]"
       role="application"
       aria-label="Trip map"
     />

@@ -140,14 +140,15 @@ export async function getTripWithDetails(
   // Auto-heal stuck generating trips that already have content
   await healStuckTripAction(tripId);
 
+  // RLS allows owner or accepted collaborator
   const { data: trip, error } = await supabase
     .from("trips")
     .select("*")
     .eq("id", tripId)
-    .eq("owner_id", user.id)
     .single();
 
   if (error || !trip) return null;
+  void user;
 
   const { data: days } = await supabase
     .from("days")
@@ -200,11 +201,12 @@ export async function listTripsAction() {
     }
   }
 
+  // RLS returns owned trips + accepted collaborations
   const { data } = await supabase
     .from("trips")
     .select("*")
-    .eq("owner_id", user.id)
     .order("updated_at", { ascending: false });
+  void user;
   return data ?? [];
 }
 

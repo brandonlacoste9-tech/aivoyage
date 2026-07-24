@@ -18,7 +18,10 @@ import {
   markTripReadyAction,
   updateTripNotesAction,
 } from "@/app/actions/trips";
+import { saveFavoriteFromActivityAction } from "@/app/actions/favorites";
 import { ExportIcsButton } from "@/components/workspace/export-ics-button";
+import { PrintButton } from "@/components/workspace/print-button";
+import { CollaboratorsPanel } from "@/components/workspace/collaborators-panel";
 import { ActivityCard } from "@/components/workspace/activity-card";
 import { AIChat } from "@/components/workspace/ai-chat";
 import { BudgetPanel } from "@/components/workspace/budget-panel";
@@ -32,9 +35,11 @@ import { Textarea } from "@/components/ui/textarea";
 export function TripWorkspace({
   trip,
   weather,
+  currentUserId,
 }: {
   trip: TripWithDetails;
   weather: WeatherDay[] | null;
+  currentUserId: string;
 }) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
@@ -43,10 +48,11 @@ export function TripWorkspace({
   const [notes, setNotes] = useState(trip.notes ?? "");
   const [pending, startTransition] = useTransition();
   const [mobileTab, setMobileTab] = useState("itinerary");
+  const [favorited, setFavorited] = useState<Record<string, boolean>>({});
 
+  const isOwner = trip.owner_id === currentUserId;
   const activeDay = trip.days.find((d) => d.id === dayId) ?? trip.days[0];
   const hasItinerary = trip.days.some((d) => d.activities.length > 0);
-  // Don't treat as stuck-generating if we already have activities
   const displayStatus =
     trip.status === "generating" && hasItinerary ? "ready" : trip.status;
   const stuckGenerating = trip.status === "generating" && hasItinerary;
@@ -60,6 +66,10 @@ export function TripWorkspace({
   );
 
   function regenerate() {
+    if (!isOwner) {
+      toast.error("Only the owner can regenerate");
+      return;
+    }
     startTransition(async () => {
       toast.message("Grok is regenerating your trip…");
       try {
@@ -119,13 +129,32 @@ export function TripWorkspace({
     });
   }
 
+  function favoriteActivity(activityId: string) {
+    const activity = mapActivities.find((a) => a.id === activityId);
+    if (!activity) return;
+    startTransition(async () => {
+      const res = await saveFavoriteFromActivityAction({
+        activity,
+        destination: trip.destination,
+      });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setFavorited((f) => ({ ...f, [activityId]: true }));
+      toast.success("Saved to favorites");
+    });
+  }
+
   return (
-    <div className="flex h-[calc(100vh-2rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100dvh-1.5rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
       {/* Top bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-xl font-bold">{trip.title}</h1>
+            <h1 className="truncate font-display text-xl font-semibold">
+              {trip.title}
+            </h1>
             <Badge
               variant={
                 displayStatus === "ready"
@@ -137,14 +166,18 @@ export function TripWorkspace({
             >
               {displayStatus}
             </Badge>
+            {!isOwner ? (
+              <Badge variant="outline">Collaborator</Badge>
+            ) : null}
           </div>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-[var(--muted)]">
             {trip.destination} · {formatDate(trip.start_date)} –{" "}
             {formatDate(trip.end_date)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <ExportIcsButton trip={trip} />
+          <PrintButton tripId={trip.id} />
           <Button variant="outline" size="sm" onClick={() => void share()}>
             <Share2 className="h-4 w-4" />
             Share
@@ -153,18 +186,20 @@ export function TripWorkspace({
             <Button asChild variant="ghost" size="sm">
               <Link href={`/share/${trip.share_token}`} target="_blank">
                 <Link2 className="h-4 w-4" />
-                Open public
+                Public
               </Link>
             </Button>
           ) : null}
-          <Button size="sm" onClick={regenerate} disabled={pending}>
-            {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Regenerate
-          </Button>
+          {isOwner ? (
+            <Button size="sm" onClick={regenerate} disabled={pending}>
+              {pending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Regenerate
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -172,11 +207,6 @@ export function TripWorkspace({
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
           <p className="font-medium">Note</p>
           <p className="mt-0.5">{trip.error_message}</p>
-          {hasItinerary ? (
-            <p className="mt-1 text-xs opacity-80">
-              Your itinerary was saved — you can ignore this if days look good.
-            </p>
-          ) : null}
         </div>
       ) : null}
 
@@ -193,15 +223,10 @@ export function TripWorkspace({
       ) : null}
 
       {trip.status === "generating" && !hasItinerary ? (
-        <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-100">
+        <div className="flex items-center gap-2 rounded-xl border border-[var(--lagoon)]/30 bg-[var(--lagoon)]/10 px-4 py-2 text-sm">
           <Loader2 className="h-4 w-4 animate-spin" />
           Generating itinerary…
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto"
-            onClick={() => router.refresh()}
-          >
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => router.refresh()}>
             Refresh
           </Button>
         </div>
@@ -210,38 +235,37 @@ export function TripWorkspace({
       {/* Mobile tabs */}
       <div className="lg:hidden">
         <Tabs value={mobileTab} onValueChange={setMobileTab}>
-          <TabsList className="w-full">
-            <TabsTrigger value="itinerary" className="flex-1">
-              Itinerary
+          <TabsList className="grid h-11 w-full grid-cols-3 rounded-2xl">
+            <TabsTrigger value="itinerary" className="rounded-xl text-xs sm:text-sm">
+              Plan
             </TabsTrigger>
-            <TabsTrigger value="map" className="flex-1">
+            <TabsTrigger value="map" className="rounded-xl text-xs sm:text-sm">
               Map
             </TabsTrigger>
-            <TabsTrigger value="context" className="flex-1">
-              AI & more
+            <TabsTrigger value="context" className="rounded-xl text-xs sm:text-sm">
+              More
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {/* 3-column desktop / tabbed mobile */}
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-12">
         {/* Left: itinerary */}
         <div
-          className={`min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-3 lg:flex ${
+          className={`min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] lg:col-span-3 lg:flex ${
             mobileTab === "itinerary" ? "flex" : "hidden lg:flex"
           }`}
         >
-          <div className="flex gap-1 overflow-x-auto border-b border-slate-100 p-2 dark:border-slate-800">
+          <div className="flex gap-1 overflow-x-auto border-b border-[var(--border)] p-2">
             {trip.days.map((d, i) => (
               <button
                 key={d.id}
                 type="button"
                 onClick={() => setDayId(d.id)}
-                className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium ${
+                className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold ${
                   d.id === activeDay?.id
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    ? "bg-[var(--lagoon)] text-[var(--primary-foreground)]"
+                    : "bg-[var(--sand-deep)] text-[var(--muted)]"
                 }`}
               >
                 Day {i + 1}
@@ -250,7 +274,7 @@ export function TripWorkspace({
           </div>
           <div className="flex-1 space-y-2 overflow-y-auto p-3">
             {trip.days.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[var(--muted)]">
                 No days yet. Generate an itinerary to populate activities.
               </p>
             ) : (
@@ -259,17 +283,27 @@ export function TripWorkspace({
                   key={a.id}
                   activity={a}
                   active={selectedActivity === a.id}
-                  onSelect={() => setSelectedActivity(a.id)}
+                  onSelect={() => {
+                    setSelectedActivity(a.id);
+                    if (window.matchMedia("(max-width: 1023px)").matches) {
+                      setMobileTab("map");
+                    }
+                  }}
+                  destination={trip.destination}
+                  favorited={!!favorited[a.id]}
+                  onFavorite={() => favoriteActivity(a.id)}
                 />
               ))
             )}
           </div>
         </div>
 
-        {/* Center: map */}
+        {/* Center: map — taller on mobile */}
         <div
-          className={`min-h-[300px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 lg:col-span-5 lg:min-h-0 ${
-            mobileTab === "map" ? "block" : "hidden lg:block"
+          className={`overflow-hidden rounded-2xl border border-[var(--border)] lg:col-span-5 lg:min-h-0 ${
+            mobileTab === "map"
+              ? "block min-h-[min(70dvh,560px)]"
+              : "hidden min-h-[300px] lg:block"
           }`}
         >
           <MapView
@@ -283,22 +317,25 @@ export function TripWorkspace({
 
         {/* Right: context */}
         <div
-          className={`min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:col-span-4 lg:flex ${
-            mobileTab === "context" ? "flex" : "hidden lg:flex"
+          className={`min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 lg:col-span-4 lg:flex ${
+            mobileTab === "context" ? "flex min-h-[50dvh]" : "hidden lg:flex"
           }`}
         >
           <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="w-full shrink-0">
-              <TabsTrigger value="chat" className="flex-1">
+            <TabsList className="flex h-auto w-full flex-wrap gap-1">
+              <TabsTrigger value="chat" className="flex-1 text-xs">
                 AI
               </TabsTrigger>
-              <TabsTrigger value="weather" className="flex-1">
+              <TabsTrigger value="weather" className="flex-1 text-xs">
                 Weather
               </TabsTrigger>
-              <TabsTrigger value="budget" className="flex-1">
+              <TabsTrigger value="budget" className="flex-1 text-xs">
                 Budget
               </TabsTrigger>
-              <TabsTrigger value="notes" className="flex-1">
+              <TabsTrigger value="people" className="flex-1 text-xs">
+                People
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="flex-1 text-xs">
                 Notes
               </TabsTrigger>
             </TabsList>
@@ -311,6 +348,9 @@ export function TripWorkspace({
             <TabsContent value="budget" className="overflow-y-auto">
               <BudgetPanel trip={trip} expenses={trip.expenses} />
             </TabsContent>
+            <TabsContent value="people" className="overflow-y-auto">
+              <CollaboratorsPanel tripId={trip.id} isOwner={isOwner} />
+            </TabsContent>
             <TabsContent value="notes" className="space-y-2">
               <Textarea
                 rows={10}
@@ -318,7 +358,7 @@ export function TripWorkspace({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Trip notes…"
               />
-              <Button size="sm" onClick={saveNotes} disabled={pending}>
+              <Button size="sm" onClick={saveNotes} disabled={pending || !isOwner}>
                 Save notes
               </Button>
             </TabsContent>

@@ -38,12 +38,16 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/trips") ||
     path.startsWith("/settings") ||
     path.startsWith("/billing") ||
-    path.startsWith("/explore");
+    path.startsWith("/explore") ||
+    path.startsWith("/favorites");
 
   if (!user && isAppRoute) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/auth/sign-in";
-    redirectUrl.searchParams.set("next", path);
+    redirectUrl.searchParams.set(
+      "next",
+      path + request.nextUrl.search,
+    );
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -51,8 +55,13 @@ export async function updateSession(request: NextRequest) {
     user &&
     (path.startsWith("/auth/sign-in") || path.startsWith("/auth/sign-up"))
   ) {
+    const next = request.nextUrl.searchParams.get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      return NextResponse.redirect(new URL(next, request.url));
+    }
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/dashboard";
+    redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }
 
