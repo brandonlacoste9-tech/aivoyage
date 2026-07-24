@@ -83,11 +83,20 @@ export function MapView({
       `;
       el.addEventListener("click", () => onSelect?.(a.id));
 
+      const meta = [a.start_time, a.type].filter(Boolean).join(" · ");
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([a.lng!, a.lat!])
         .setPopup(
-          new mapboxgl.Popup({ offset: 16 }).setHTML(
-            `<strong>${escapeHtml(a.title)}</strong><br/><span style="font-size:12px;opacity:.7">${a.start_time || ""} · ${a.type}</span>`,
+          new mapboxgl.Popup({
+            offset: 18,
+            closeButton: true,
+            maxWidth: "240px",
+            className: "voyage-map-popup",
+          }).setHTML(
+            `<span class="voyage-popup-title">${escapeHtml(a.title)}</span>` +
+              (meta
+                ? `<span class="voyage-popup-meta">${escapeHtml(meta)}</span>`
+                : ""),
           ),
         )
         .addTo(map);
