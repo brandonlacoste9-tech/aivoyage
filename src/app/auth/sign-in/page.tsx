@@ -4,18 +4,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import { toast } from "sonner";
+import { Compass } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 function SignInForm() {
   const router = useRouter();
@@ -38,66 +31,74 @@ function SignInForm() {
         toast.error(error.message);
         return;
       }
-      toast.success("Welcome back");
+      toast.success("Welcome back — your trips are waiting");
       router.push(next);
       router.refresh();
     } catch {
-      toast.error("Auth is not configured. Check Supabase env vars.");
+      toast.error("Auth isn’t configured yet. Add Supabase keys in Netlify.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-        <CardDescription>Access your VoyageAI workspace</CardDescription>
-      </CardHeader>
-      <form onSubmit={onSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
-          </Button>
-          <p className="text-center text-sm text-slate-500">
-            No account?{" "}
-            <Link href="/auth/sign-up" className="text-indigo-600 hover:underline">
-              Sign up
-            </Link>
+    <div className="w-full max-w-md rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-8 shadow-xl shadow-[var(--ink)]/5">
+      <div className="mb-6 flex items-center gap-2">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--lagoon)] text-[var(--primary-foreground)]">
+          <Compass className="h-5 w-5" />
+        </span>
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Welcome back</h1>
+          <p className="text-sm text-[var(--muted)]">
+            Pick up where your itinerary left off
           </p>
-        </CardFooter>
+        </div>
+      </div>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="rounded-2xl"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="rounded-2xl"
+          />
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+        <p className="text-center text-sm text-[var(--muted)]">
+          New here?{" "}
+          <Link
+            href="/auth/sign-up"
+            className="font-semibold text-[var(--lagoon)] hover:underline"
+          >
+            Create an account
+          </Link>
+        </p>
       </form>
-    </Card>
+    </div>
   );
 }
 
 export default function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4">
       <Suspense>
         <SignInForm />
       </Suspense>

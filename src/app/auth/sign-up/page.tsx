@@ -4,18 +4,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import { toast } from "sonner";
+import { Compass } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 function SignUpForm() {
   const router = useRouter();
@@ -43,7 +36,7 @@ function SignUpForm() {
         toast.error(error.message);
         return;
       }
-      toast.success("Account created — check email if confirmation is required");
+      toast.success("Account created — let’s build your first trip");
       const params = new URLSearchParams();
       if (prompt) params.set("prompt", prompt);
       if (destination) params.set("destination", destination);
@@ -51,72 +44,81 @@ function SignUpForm() {
       router.push(q ? `/trips/new?${q}` : "/dashboard");
       router.refresh();
     } catch {
-      toast.error("Auth is not configured. Check Supabase env vars.");
+      toast.error("Auth isn’t configured yet. Add Supabase keys in Netlify.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Create account</CardTitle>
-        <CardDescription>Start planning smarter trips free</CardDescription>
-      </CardHeader>
-      <form onSubmit={onSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Display name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Alex"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating…" : "Sign up"}
-          </Button>
-          <p className="text-center text-sm text-slate-500">
-            Already have an account?{" "}
-            <Link href="/auth/sign-in" className="text-indigo-600 hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </CardFooter>
+    <div className="w-full max-w-md rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-8 shadow-xl shadow-[var(--ink)]/5">
+      <div className="mb-6">
+        <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--coral)] text-white">
+          <Compass className="h-5 w-5" />
+        </span>
+        <h1 className="font-display text-2xl font-semibold">
+          Start your first voyage
+        </h1>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Free plan. No card. One sentence is enough to begin.
+        </p>
+      </div>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">What should we call you?</Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Alex"
+            className="rounded-2xl"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="rounded-2xl"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="rounded-2xl"
+          />
+        </div>
+        <Button type="submit" variant="accent" className="w-full" disabled={loading}>
+          {loading ? "Creating…" : "Create free account"}
+        </Button>
+        <p className="text-center text-sm text-[var(--muted)]">
+          Already planning?{" "}
+          <Link
+            href="/auth/sign-in"
+            className="font-semibold text-[var(--lagoon)] hover:underline"
+          >
+            Sign in
+          </Link>
+        </p>
       </form>
-    </Card>
+    </div>
   );
 }
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4">
       <Suspense>
         <SignUpForm />
       </Suspense>

@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   LogOut,
   Map,
-  Plane,
   Plus,
   Settings,
 } from "lucide-react";
@@ -47,11 +46,14 @@ export function AppNav({
   }
 
   return (
-    <aside className="flex w-full flex-col border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 lg:h-screen lg:w-60 lg:border-b-0 lg:border-r">
+    <aside className="flex w-full flex-col border-b border-[var(--border)] bg-[var(--card)] lg:h-screen lg:w-60 lg:border-b-0 lg:border-r">
       <div className="flex items-center justify-between gap-2 px-4 py-4">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-cyan-500 text-white">
-            <Plane className="h-3.5 w-3.5" />
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 font-display font-semibold"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--lagoon)] text-[var(--primary-foreground)]">
+            <Compass className="h-4 w-4" />
           </span>
           {APP_NAME}
         </Link>
@@ -68,10 +70,10 @@ export function AppNav({
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2 whitespace-nowrap rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900",
+                  ? "bg-[var(--lagoon)]/10 text-[var(--lagoon)]"
+                  : "text-[var(--muted)] hover:bg-[var(--sand-deep)] hover:text-[var(--foreground)]",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -81,16 +83,19 @@ export function AppNav({
         })}
       </nav>
 
-      <div className="mt-auto space-y-2 border-t border-slate-200 p-4 dark:border-slate-800">
+      <div className="mt-auto space-y-2 border-t border-[var(--border)] p-4">
         {creditsLabel ? (
-          <p className="text-xs text-slate-500">
-            Plan: <span className="font-medium text-slate-800 dark:text-slate-200">{plan}</span>
+          <p className="text-xs text-[var(--muted)]">
+            Plan:{" "}
+            <span className="font-semibold text-[var(--foreground)]">
+              {plan}
+            </span>
             <br />
             {creditsLabel}
           </p>
         ) : null}
         {email ? (
-          <p className="truncate text-xs text-slate-500" title={email}>
+          <p className="truncate text-xs text-[var(--muted)]" title={email}>
             {email}
           </p>
         ) : null}

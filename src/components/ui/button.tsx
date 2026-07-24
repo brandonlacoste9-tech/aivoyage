@@ -4,26 +4,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--lagoon)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 active:scale-[0.98]",
+          "bg-[var(--lagoon)] text-[var(--primary-foreground)] shadow-md shadow-[var(--lagoon)]/20 hover:bg-[var(--lagoon-light)] active:scale-[0.98]",
         secondary:
-          "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25",
+          "bg-[var(--secondary)]/15 text-[var(--lagoon)] hover:bg-[var(--secondary)]/25",
         accent:
-          "bg-amber-500 text-slate-950 shadow-sm hover:bg-amber-400 active:scale-[0.98]",
+          "bg-[var(--coral)] text-white shadow-md shadow-[var(--coral)]/25 hover:bg-[var(--coral-deep)] active:scale-[0.98]",
         outline:
-          "border border-slate-200 dark:border-slate-700 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800",
-        ghost: "hover:bg-slate-100 dark:hover:bg-slate-800",
+          "border border-[var(--border)] bg-transparent text-[var(--foreground)] hover:bg-[var(--sand-deep)] dark:hover:bg-[var(--card)]",
+        ghost: "hover:bg-[var(--sand-deep)] dark:hover:bg-[var(--card)]",
         destructive: "bg-red-600 text-white hover:bg-red-500",
-        link: "text-indigo-600 underline-offset-4 hover:underline",
+        link: "text-[var(--lagoon)] underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 rounded-lg px-3 text-xs",
-        lg: "h-12 rounded-2xl px-6 text-base",
+        default: "h-10 px-5 py-2",
+        sm: "h-8 rounded-full px-3.5 text-xs",
+        lg: "h-12 rounded-full px-7 text-base",
         icon: "h-10 w-10",
       },
     },

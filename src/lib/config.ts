@@ -1,5 +1,5 @@
 export const APP_NAME = "VoyageAI";
-export const APP_TAGLINE = "AI-powered travel planning";
+export const APP_TAGLINE = "Itineraries that feel like a local wrote them";
 
 export const FREE_AI_GENERATIONS_PER_MONTH = 3;
 export const FREE_ACTIVE_TRIPS = 3;
