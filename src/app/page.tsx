@@ -119,46 +119,27 @@ export default async function HomePage() {
     <div className="min-h-screen bg-paper">
       <SiteHeader />
       <main>
-        {/* HERO */}
-        <section className="relative overflow-hidden px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-16">
-          {/* Faded travel photo backdrop */}
-          <div className="pointer-events-none absolute inset-0 -z-10 hero-photo-fade">
+        {/* HERO — photo must stay z-0 (not -z-10) or page bg paints over it */}
+        <section className="relative isolate min-h-[min(88vh,820px)] overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 z-0">
             <Image
               src={HERO_IMAGE}
-              alt=""
+              alt="Traveler overlooking a scenic destination"
               fill
               priority
               sizes="100vw"
-              className="object-cover object-[center_35%] opacity-[0.28] saturate-[0.9] contrast-[0.95] dark:opacity-[0.2] dark:saturate-[0.75]"
+              className="object-cover object-[center_30%]"
             />
-            {/* Fade photo into brand sand paper so sections blend cleanly */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `
-                  linear-gradient(
-                    180deg,
-                    color-mix(in srgb, var(--background) 35%, transparent) 0%,
-                    color-mix(in srgb, var(--background) 55%, transparent) 45%,
-                    var(--background) 92%
-                  ),
-                  linear-gradient(
-                    90deg,
-                    color-mix(in srgb, var(--background) 70%, transparent) 0%,
-                    transparent 40%,
-                    transparent 60%,
-                    color-mix(in srgb, var(--background) 40%, transparent) 100%
-                  ),
-                  radial-gradient(ellipse 80% 60% at 15% 20%, rgba(15, 92, 99, 0.12), transparent 55%),
-                  radial-gradient(ellipse 50% 40% at 90% 10%, rgba(224, 122, 95, 0.1), transparent 50%)
-                `,
-              }}
-            />
+            {/* Soft brand wash — photo stays visible underneath */}
+            <div className="absolute inset-0 bg-[var(--background)]/55 dark:bg-[var(--background)]/65" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[var(--background)]/80 via-[var(--background)]/45 to-[var(--background)]/25" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/30 to-transparent" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_20%_20%,rgba(15,92,99,0.14),transparent_60%)]" />
           </div>
 
-          <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-12 lg:gap-10">
+          <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-16 lg:grid-cols-12 lg:gap-10">
             <div className="lg:col-span-6">
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)]/85 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--lagoon)] shadow-sm backdrop-blur-sm">
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)]/90 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--lagoon)] shadow-sm backdrop-blur-md">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--coral)]" />
                 Handcrafted by AI · Tuned by you
               </p>
@@ -167,7 +148,7 @@ export default async function HomePage() {
                 <br />
                 <span className="gradient-text italic">Start traveling.</span>
               </h1>
-              <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--muted)] [text-shadow:0_1px_0_color-mix(in_srgb,var(--background)_80%,transparent)]">
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
                 {APP_NAME} turns a half-formed idea into a day-by-day itinerary
                 with real places, a map, weather, and budget — then lets you
                 refine it in conversation until it feels like{" "}
