@@ -24,13 +24,23 @@ function SignInForm() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) {
         toast.error(error.message);
         return;
+      }
+      try {
+        const { default: posthog } = await import("posthog-js");
+        const userId = signInData?.user?.id;
+        if (userId) {
+          posthog.identify(userId);
+        }
+        posthog.capture("user_signed_in");
+      } catch {
+        /* ignore */
       }
       toast.success("Welcome back — your trips are waiting");
       router.push(next);

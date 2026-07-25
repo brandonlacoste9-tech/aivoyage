@@ -12,27 +12,28 @@ export function isPostHogConfigured() {
 
 export type AnalyticsEvent =
   | "signup_completed"
+  | "user_signed_in"
+  | "user_signed_out"
   | "trip_created"
   | "trip_generated"
+  | "paywall_shown"
   | "checkout_started"
   | "promo_redeemed"
   | "share_created"
+  | "ai_chat_sent"
   | "explore_country_lookup";
 
-/** Fire-and-forget client event (requires PostHog provider mounted). */
+/** Fire-and-forget client event. Initialized via instrumentation-client.ts. */
 export function trackEvent(
   name: AnalyticsEvent | string,
   properties?: Record<string, unknown>,
 ) {
   if (typeof window === "undefined") return;
+  if (!isPostHogConfigured()) return;
   try {
-    // Dynamic access avoids hard crash if provider not loaded
-    const ph = (
-      window as unknown as {
-        posthog?: { capture: (e: string, p?: Record<string, unknown>) => void };
-      }
-    ).posthog;
-    ph?.capture(name, properties);
+    import("posthog-js").then(({ default: posthog }) => {
+      posthog.capture(name, properties);
+    }).catch(() => {});
   } catch {
     /* ignore */
   }

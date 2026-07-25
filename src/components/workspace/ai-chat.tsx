@@ -31,6 +31,9 @@ export function AIChat({ tripId }: { tripId: string }) {
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
     try {
+      import("posthog-js").then(({ default: posthog }) => {
+        posthog.capture("ai_chat_sent", { trip_id: tripId });
+      }).catch(() => {});
       const res = await fetch("/api/trips/chat-apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

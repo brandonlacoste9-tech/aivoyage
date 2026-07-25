@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { createClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 
@@ -104,6 +105,17 @@ export async function POST(req: Request) {
           subscriptionId,
           plan: "pro",
         });
+        if (userId) {
+          const posthog = getPostHogClient();
+          if (posthog) {
+            posthog.capture({
+              distinctId: userId,
+              event: "subscription_activated",
+              properties: { plan: "pro", subscription_id: subscriptionId },
+            });
+            await posthog.flush();
+          }
+        }
         break;
       }
 
@@ -127,6 +139,17 @@ export async function POST(req: Request) {
           subscriptionId: plan === "pro" ? sub.id : null,
           plan,
         });
+        if (userId && event.type === "customer.subscription.deleted") {
+          const posthog = getPostHogClient();
+          if (posthog) {
+            posthog.capture({
+              distinctId: userId,
+              event: "subscription_canceled",
+              properties: { subscription_id: sub.id },
+            });
+            await posthog.flush();
+          }
+        }
         break;
       }
 

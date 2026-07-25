@@ -43,6 +43,13 @@ export function AppNav({
   const router = useRouter();
 
   async function signOut() {
+    try {
+      const { default: posthog } = await import("posthog-js");
+      posthog.capture("user_signed_out");
+      posthog.reset();
+    } catch {
+      /* ignore */
+    }
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");

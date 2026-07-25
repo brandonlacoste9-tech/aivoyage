@@ -25,6 +25,12 @@ export function PromoCodeForm() {
             toast.error(res.error);
             return;
           }
+          try {
+            const { default: posthog } = await import("posthog-js");
+            posthog.capture("promo_redeemed");
+          } catch {
+            /* ignore */
+          }
           toast.success(res.message);
           setCode("");
           router.refresh();
