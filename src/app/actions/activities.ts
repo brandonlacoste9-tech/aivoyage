@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
-import type { Activity, ActivityType } from "@/lib/types";
+import type { ActivityType } from "@/lib/types";
 
 export type ActionResult<T = void> =
   | { ok: true; data?: T }

@@ -16,9 +16,6 @@ function ymd(d: string) {
 /** Google Flights explore-style search URL */
 export function googleFlightsUrl(ctx: TripBookingContext) {
   const origin = encodeURIComponent(ctx.origin || "");
-  const dest = encodeURIComponent(
-    ctx.cities?.[0]?.name || ctx.destination.split(/→|,/)[0].trim(),
-  );
   // Free-form query works in the UI
   const q = encodeURIComponent(
     `Flights to ${ctx.cities?.[0]?.name || ctx.destination} ${ymd(ctx.startDate)} to ${ymd(ctx.endDate)}`,

@@ -60,7 +60,8 @@ export function TripWizard({
   const [travelers, setTravelers] = useState("2");
   const [interests, setInterests] = useState<string[]>(["food", "culture"]);
   const [prompt, setPrompt] = useState(defaultPrompt);
-  const [vibe, setVibe] = useState(defaultVibe);
+  // Photo vibe is set from plan-from-photo flow via defaultVibe prop
+  const vibe = defaultVibe;
   const [paywall, setPaywall] = useState(false);
 
   function toggleInterest(i: string) {

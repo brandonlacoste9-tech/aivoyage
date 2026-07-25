@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
@@ -90,7 +90,16 @@ export function ActivityList({
   favorited?: Record<string, boolean>;
   onRegenerateDay?: () => void;
 }) {
+  // Local order for DnD; re-sync when the day's activity set changes (React
+  // "adjust state when props change" pattern — avoids setState-in-useEffect).
+  const initialKey = `${dayId}:${initial.map((a) => a.id).join(",")}`;
   const [items, setItems] = useState(initial);
+  const [itemsKey, setItemsKey] = useState(initialKey);
+  if (initialKey !== itemsKey) {
+    setItemsKey(initialKey);
+    setItems(initial);
+  }
+
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState<Activity | null>(null);
   const [commentFor, setCommentFor] = useState<string | null>(null);
@@ -103,10 +112,6 @@ export function ActivityList({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-
-  useEffect(() => {
-    setItems(initial);
-  }, [initial]);
 
   function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
