@@ -40,7 +40,7 @@ export function PromoCodeForm() {
           id="promo"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="TRIPPLANNER-VIP"
+          placeholder="Enter code"
           className="font-mono uppercase tracking-wide"
           autoComplete="off"
           required
