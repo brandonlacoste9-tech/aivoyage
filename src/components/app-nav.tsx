@@ -53,7 +53,7 @@ export function AppNav({
     <aside className="flex w-full flex-col border-b border-[var(--border)] bg-[var(--card)] lg:h-screen lg:w-60 lg:border-b-0 lg:border-r">
       <div className="flex items-center justify-between gap-2 px-4 py-4">
         <Link
-          href="/dashboard"
+          href="/"
           className="flex items-center gap-2 font-display font-semibold"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--lagoon)] text-[var(--primary-foreground)]">
