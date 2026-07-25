@@ -3,6 +3,9 @@ import { getStripe } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -10,6 +13,40 @@ function adminClient() {
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+async function setPro(
+  supabase: NonNullable<ReturnType<typeof adminClient>>,
+  opts: {
+    userId?: string | null;
+    customerId?: string | null;
+    subscriptionId?: string | null;
+    plan: "pro" | "free";
+  },
+) {
+  const patch: Record<string, unknown> = {
+    plan: opts.plan,
+    stripe_subscription_id:
+      opts.plan === "pro" ? opts.subscriptionId ?? null : null,
+  };
+  if (opts.customerId) patch.stripe_customer_id = opts.customerId;
+
+  if (opts.userId) {
+    const { error } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("id", opts.userId);
+    if (error) throw error;
+    return;
+  }
+
+  if (opts.customerId) {
+    const { error } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("stripe_customer_id", opts.customerId);
+    if (error) throw error;
+  }
 }
 
 export async function POST(req: Request) {
@@ -48,45 +85,80 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode !== "subscription") break;
+
         const userId =
           session.metadata?.supabase_user_id ||
-          session.client_reference_id;
-        if (userId) {
-          await supabase
-            .from("profiles")
-            .update({
-              plan: "pro",
-              stripe_customer_id: session.customer as string,
-              stripe_subscription_id: session.subscription as string,
-            })
-            .eq("id", userId);
-        }
+          session.client_reference_id ||
+          null;
+        const customerId =
+          typeof session.customer === "string" ? session.customer : null;
+        const subscriptionId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : null;
+
+        await setPro(supabase, {
+          userId,
+          customerId,
+          subscriptionId,
+          plan: "pro",
+        });
         break;
       }
+
+      case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        const userId = sub.metadata?.supabase_user_id;
-        const active = ["active", "trialing"].includes(sub.status);
-        if (userId) {
-          await supabase
-            .from("profiles")
-            .update({
-              plan: active ? "pro" : "free",
-              stripe_subscription_id: active ? sub.id : null,
-            })
-            .eq("id", userId);
-        } else if (sub.customer) {
-          await supabase
-            .from("profiles")
-            .update({
-              plan: active ? "pro" : "free",
-              stripe_subscription_id: active ? sub.id : null,
-            })
-            .eq("stripe_customer_id", sub.customer as string);
+        const userId = sub.metadata?.supabase_user_id || null;
+        const customerId =
+          typeof sub.customer === "string" ? sub.customer : null;
+        const active = ["active", "trialing", "past_due"].includes(sub.status);
+        // past_due keeps pro briefly while Stripe retries; deleted/canceled → free
+        const plan =
+          event.type === "customer.subscription.deleted" || !active
+            ? "free"
+            : "pro";
+
+        await setPro(supabase, {
+          userId,
+          customerId,
+          subscriptionId: plan === "pro" ? sub.id : null,
+          plan,
+        });
+        break;
+      }
+
+      case "invoice.paid": {
+        // Renewals — ensure plan stays pro
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId =
+          typeof invoice.customer === "string" ? invoice.customer : null;
+        const subscriptionId =
+          typeof (invoice as { subscription?: string | null }).subscription ===
+          "string"
+            ? (invoice as { subscription?: string }).subscription
+            : null;
+        if (customerId && subscriptionId) {
+          await setPro(supabase, {
+            customerId,
+            subscriptionId,
+            plan: "pro",
+          });
         }
         break;
       }
+
+      case "invoice.payment_failed": {
+        // Leave plan as-is; subscription.updated will flip free if it cancels
+        console.warn(
+          "[stripe webhook] invoice.payment_failed",
+          (event.data.object as Stripe.Invoice).id,
+        );
+        break;
+      }
+
       default:
         break;
     }
