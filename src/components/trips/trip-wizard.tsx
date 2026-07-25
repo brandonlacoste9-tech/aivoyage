@@ -121,6 +121,20 @@ export function TripWizard({
         return;
       }
 
+      try {
+        const { default: posthog } = await import("posthog-js");
+        posthog.capture("trip_created", {
+          destination: multiCity ? legs.map((c) => c.name).join(" → ") : destination,
+          multi_city: multiCity,
+          travelers: parseInt(travelers, 10),
+          pace,
+          interests,
+          has_budget: Boolean(budget),
+        });
+      } catch {
+        /* ignore */
+      }
+
       toast.message("Grok is planning your trip… (30–60s)");
       const res = await fetch("/api/trips/generate", {
         method: "POST",
@@ -138,11 +152,28 @@ export function TripWizard({
       if (!res.ok || !gen.ok) {
         toast.error(gen.error || `Generation failed (${res.status})`);
         if (gen.paywall || res.status === 402) {
+          try {
+            const { default: posthog } = await import("posthog-js");
+            posthog.capture("paywall_shown", { trigger: "trip_generation" });
+          } catch {
+            /* ignore */
+          }
           setPaywall(true);
           return;
         }
         router.push(`/trips/${created.data.id}`);
         return;
+      }
+
+      try {
+        const { default: posthog } = await import("posthog-js");
+        posthog.capture("trip_generated", {
+          days: gen.days,
+          provider: gen.provider,
+          multi_city: multiCity,
+        });
+      } catch {
+        /* ignore */
       }
 
       toast.success(

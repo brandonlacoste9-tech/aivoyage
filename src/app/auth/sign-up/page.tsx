@@ -25,7 +25,7 @@ function SignUpForm() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -39,8 +39,12 @@ function SignUpForm() {
       // Best-effort welcome email + analytics (non-blocking)
       void fetch("/api/notify/welcome", { method: "POST" }).catch(() => {});
       try {
-        const { trackEvent } = await import("@/lib/analytics");
-        trackEvent("signup_completed");
+        const { default: posthog } = await import("posthog-js");
+        const userId = signUpData?.user?.id;
+        if (userId) {
+          posthog.identify(userId, { plan: "free" });
+        }
+        posthog.capture("signup_completed");
       } catch {
         /* ignore */
       }

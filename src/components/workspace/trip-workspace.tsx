@@ -114,6 +114,12 @@ export function TripWorkspace({
     }
     const url = `${window.location.origin}/share/${res.data.token}`;
     await navigator.clipboard.writeText(url);
+    try {
+      const { default: posthog } = await import("posthog-js");
+      posthog.capture("share_created", { trip_id: trip.id });
+    } catch {
+      /* ignore */
+    }
     toast.success("Share link copied");
   }
 
