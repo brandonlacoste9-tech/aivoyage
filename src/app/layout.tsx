@@ -95,6 +95,9 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  verification: {
+    google: "neXzlPA6mo-Ooh30ZnnTIAN01p6-0Ms7dgqfH-rGk2w",
+  },
   other: {
     "ai-content-declaration": "human-authored product and documentation content",
   },
