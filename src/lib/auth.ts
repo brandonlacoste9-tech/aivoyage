@@ -36,7 +36,25 @@ export async function ensureProfileRow(
     .eq("id", userId)
     .maybeSingle();
 
-  if (!error && data) return data as Profile;
+  if (!error && data) {
+    // Lazy-expire promo Pro
+    const p = data as Profile;
+    if (
+      p.plan === "pro" &&
+      p.promo_expires_at &&
+      new Date(p.promo_expires_at) <= new Date() &&
+      !p.stripe_subscription_id
+    ) {
+      const { data: downgraded } = await supabase
+        .from("profiles")
+        .update({ plan: "free" })
+        .eq("id", userId)
+        .select("*")
+        .single();
+      if (downgraded) return downgraded as Profile;
+    }
+    return p;
+  }
 
   const display =
     email?.split("@")[0] || "Traveler";

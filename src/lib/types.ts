@@ -19,6 +19,8 @@ export interface Profile {
   stripe_subscription_id: string | null;
   ai_generations_month: number;
   ai_generations_reset_at: string;
+  promo_code?: string | null;
+  promo_expires_at?: string | null;
   created_at: string;
 }
 

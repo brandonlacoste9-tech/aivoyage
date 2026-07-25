@@ -1,13 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import {
   createCheckoutSessionAction,
   createPortalSessionAction,
 } from "@/app/actions/billing";
+import { PromoCodeForm } from "@/components/billing/promo-code-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Check } from "lucide-react";
 
 function BillingInner() {
   const searchParams = useSearchParams();
@@ -49,8 +49,10 @@ function BillingInner() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
-        <p className="text-slate-600 dark:text-slate-400">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          Billing
+        </h1>
+        <p className="text-[var(--muted)]">
           Manage your Trip Planner subscription
         </p>
       </div>
@@ -61,14 +63,14 @@ function BillingInner() {
         </div>
       ) : null}
       {canceled ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm">
           Checkout canceled — no charges made.
         </div>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Pro — $12/mo</CardTitle>
+          <CardTitle className="font-display text-xl">Pro — $12/mo</CardTitle>
           <CardDescription>
             Unlimited AI itinerary generation and trips
           </CardDescription>
@@ -82,19 +84,31 @@ function BillingInner() {
               "Stripe Customer Portal",
             ].map((item) => (
               <li key={item} className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-indigo-500" />
+                <Check className="h-4 w-4 text-[var(--lagoon)]" />
                 {item}
               </li>
             ))}
           </ul>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={checkout} disabled={pending}>
+            <Button onClick={checkout} disabled={pending} variant="accent">
               {pending ? "Redirecting…" : "Upgrade with Stripe"}
             </Button>
             <Button variant="outline" onClick={portal} disabled={pending}>
               Customer portal
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-lg">Promo code</CardTitle>
+          <CardDescription>
+            Redeem a code for free Pro time or bonus AI plans
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PromoCodeForm />
         </CardContent>
       </Card>
     </div>

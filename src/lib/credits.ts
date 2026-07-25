@@ -31,8 +31,16 @@ export async function ensureCreditsReset(
   return data as Profile;
 }
 
+/** Pro via Stripe or an active promo grant. */
+export function isProActive(profile: Profile): boolean {
+  if (profile.plan !== "pro") return false;
+  if (!profile.promo_expires_at) return true; // Stripe/manual pro, no expiry
+  return new Date(profile.promo_expires_at) > new Date();
+}
+
 export function canGenerate(profile: Profile) {
-  if (profile.plan === "pro") return { ok: true as const };
+  if (isProActive(profile)) return { ok: true as const };
+  // Promo expired but plan still "pro" → treat as free until renewed
   if (profile.ai_generations_month >= FREE_AI_GENERATIONS_PER_MONTH) {
     return {
       ok: false as const,
@@ -46,7 +54,7 @@ export async function canCreateTrip(
   supabase: SupabaseClient,
   profile: Profile,
 ) {
-  if (profile.plan === "pro") return { ok: true as const };
+  if (isProActive(profile)) return { ok: true as const };
 
   const { count, error } = await supabase
     .from("trips")
@@ -87,9 +95,31 @@ export async function incrementGeneration(
 }
 
 export function remainingGenerations(profile: Profile) {
-  if (profile.plan === "pro") return Infinity;
+  if (isProActive(profile)) return Infinity;
   return Math.max(
     0,
     FREE_AI_GENERATIONS_PER_MONTH - profile.ai_generations_month,
   );
+}
+
+/** Downgrade expired promo Pro back to free (best-effort). */
+export async function expirePromoIfNeeded(
+  supabase: SupabaseClient,
+  profile: Profile,
+): Promise<Profile> {
+  if (
+    profile.plan === "pro" &&
+    profile.promo_expires_at &&
+    new Date(profile.promo_expires_at) <= new Date() &&
+    !profile.stripe_subscription_id
+  ) {
+    const { data } = await supabase
+      .from("profiles")
+      .update({ plan: "free" })
+      .eq("id", profile.id)
+      .select()
+      .single();
+    if (data) return data as Profile;
+  }
+  return profile;
 }
