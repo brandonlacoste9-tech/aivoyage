@@ -107,6 +107,16 @@ export function SiteFooter() {
                   Share on X
                 </a>
               </li>
+              <li>
+                <a
+                  href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Ftrip-planner.co"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[var(--lagoon)]"
+                >
+                  Share on Facebook
+                </a>
+              </li>
             </ul>
           </div>
         </div>
