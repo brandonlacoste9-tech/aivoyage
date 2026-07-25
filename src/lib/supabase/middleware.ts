@@ -33,12 +33,12 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
+  // /explore and /explore/* are public (SEO destination pages + country search)
   const isAppRoute =
     path.startsWith("/dashboard") ||
     path.startsWith("/trips") ||
     path.startsWith("/settings") ||
     path.startsWith("/billing") ||
-    path.startsWith("/explore") ||
     path.startsWith("/favorites") ||
     path.startsWith("/plan");
 

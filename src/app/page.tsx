@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,58 +13,65 @@ import {
 import { SiteHeader } from "@/components/site-header";
 import { HeroPrompt } from "@/components/landing/hero-prompt";
 import { ItineraryPreview } from "@/components/landing/itinerary-preview";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { APP_NAME } from "@/lib/config";
+import { DESTINATIONS, destinationSlug } from "@/lib/destinations";
+import { faqPageSchema, howToSchema, SEO_DEFAULT_DESCRIPTION } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: `${APP_NAME} — AI Trip Planner for Day-by-Day Itineraries`,
+  },
+  description: SEO_DEFAULT_DESCRIPTION,
+  alternates: { canonical: "/" },
+};
 
 /** Soft full-bleed hero photo — faded under copy */
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=2000&q=80";
 
-const destinations = [
+const HOME_FAQS = [
   {
-    name: "Kyoto",
-    vibe: "Temples, tea, golden hour alleys",
-    season: "Best in autumn",
-    image:
-      "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=900&q=80",
+    question: "What is Trip Planner?",
+    answer:
+      "Trip Planner is an AI travel planning app at trip-planner.co that turns a half-formed idea into a day-by-day itinerary with real places, maps, weather, and budget — then lets you refine it in chat.",
   },
   {
-    name: "Lisbon",
-    vibe: "Hills, miradouros, late dinners",
-    season: "Year-round light",
-    image:
-      "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=900&q=80",
+    question: "Do I need to know my whole itinerary?",
+    answer:
+      "No. One sentence is enough — destination, vibe, and dates. The AI fills the rest; you refine in chat.",
   },
   {
-    name: "Bali",
-    vibe: "Rice terraces & slow mornings",
-    season: "Dry season magic",
-    image:
-      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=900&q=80",
+    question: "Is the free plan actually usable?",
+    answer:
+      "Yes. You get a few AI generations and active trips per month — enough to plan real getaways before upgrading.",
   },
   {
-    name: "Rome",
-    vibe: "History stacked on long lunches",
-    season: "Spring & fall",
-    image:
-      "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=900&q=80",
+    question: "Can I share with friends who don’t have an account?",
+    answer:
+      "Yes. Generate a public link from any trip. They see the day-by-day plan; they don’t need to sign up.",
   },
   {
-    name: "Seoul",
-    vibe: "Palaces by day, neon by night",
-    season: "Cherry blossom",
-    image:
-      "https://images.unsplash.com/photo-1517154421773-0529f29ea451?auto=format&fit=crop&w=900&q=80",
+    question: "What’s on the map?",
+    answer:
+      "Each activity gets a pin. Click for a photo (when available) and details. Weather and budget live in the side panel.",
   },
   {
-    name: "New York",
-    vibe: "Neighborhoods as micro-countries",
-    season: "Fall foliage energy",
-    image:
-      "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=900&q=80",
+    question: "How is Trip Planner different from asking a chatbot for a trip?",
+    answer:
+      "Trip Planner produces a structured, editable itinerary with maps, weather, budget rollups, and share links — not a disposable chat transcript.",
   },
 ];
+
+const destinations = DESTINATIONS.slice(0, 6).map((d) => ({
+  name: d.name,
+  vibe: d.blurb,
+  season: d.season,
+  image: d.image,
+  slug: destinationSlug(d.name),
+}));
 
 const steps = [
   {
@@ -117,6 +125,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-paper">
+      <JsonLd data={[faqPageSchema(HOME_FAQS), howToSchema()]} />
       <SiteHeader />
       <main>
         {/* HERO — photo must stay z-0 (not -z-10) or page bg paints over it */}
@@ -124,7 +133,7 @@ export default async function HomePage() {
           <div className="pointer-events-none absolute inset-0 z-0">
             <Image
               src={HERO_IMAGE}
-              alt="Traveler overlooking a scenic destination"
+              alt="Traveler overlooking a scenic destination — AI trip planning"
               fill
               priority
               sizes="100vw"
@@ -141,17 +150,17 @@ export default async function HomePage() {
             <div className="lg:col-span-6">
               <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)]/90 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--lagoon)] shadow-sm backdrop-blur-md">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--coral)]" />
-                Handcrafted by AI · Tuned by you
+                AI trip planner · Free to start
               </p>
               <h1 className="font-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.4rem]">
-                Stop pasting links into a doc.
+                AI trip planner for day-by-day itineraries
                 <br />
-                <span className="gradient-text italic">Start traveling.</span>
+                <span className="gradient-text italic">that feel local.</span>
               </h1>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--muted)]">
-                {APP_NAME} turns a half-formed idea into a day-by-day itinerary
-                with real places, a map, weather, and budget — then lets you
-                refine it in conversation until it feels like{" "}
+                {APP_NAME} turns a half-formed travel idea into a structured
+                day-by-day itinerary with real places, a map, weather, and budget
+                — then lets you refine it in conversation until it feels like{" "}
                 <em className="font-display not-italic text-[var(--foreground)]">
                   your
                 </em>{" "}
@@ -260,11 +269,7 @@ export default async function HomePage() {
               {destinations.map((d, i) => (
                 <Link
                   key={d.name}
-                  href={
-                    user
-                      ? `/trips/new?destination=${encodeURIComponent(d.name)}`
-                      : `/auth/sign-up?destination=${encodeURIComponent(d.name)}`
-                  }
+                  href={`/explore/${d.slug}`}
                   className={`dest-card group relative block overflow-hidden rounded-[1.5rem] ${
                     i === 0 || i === 5 ? "sm:col-span-2 lg:col-span-1" : ""
                   }`}
@@ -337,47 +342,33 @@ export default async function HomePage() {
           </figure>
         </section>
 
-        {/* FAQ */}
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
+        {/* FAQ — visible + schema for classic SEO and AI answer engines */}
+        <section
+          id="faq"
+          className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20"
+        >
           <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-[var(--lagoon)]">
             FAQ
           </p>
           <h2 className="mt-3 text-center font-display text-3xl font-semibold tracking-tight">
-            Quick answers
+            AI trip planner — quick answers
           </h2>
           <div className="mt-10 space-y-3">
-            {[
-              {
-                q: "Do I need to know my whole itinerary?",
-                a: "No. One sentence is enough — destination, vibe, and dates. Grok fills the rest; you refine in chat.",
-              },
-              {
-                q: "Is the free plan actually usable?",
-                a: "Yes. A few AI generations and active trips per month — enough to plan real getaways before upgrading.",
-              },
-              {
-                q: "Can I share with friends who don’t have an account?",
-                a: "Yes. Generate a public link from any trip. They see the day-by-day plan; they don’t need to sign up.",
-              },
-              {
-                q: "What’s on the map?",
-                a: "Each activity gets a pin. Click for a photo (when available) and details. Weather and budget live in the side panel.",
-              },
-            ].map((item) => (
+            {HOME_FAQS.map((item) => (
               <details
-                key={item.q}
+                key={item.question}
                 className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] px-5 py-4 open:shadow-sm"
               >
                 <summary className="cursor-pointer list-none font-medium marker:content-none [&::-webkit-details-marker]:hidden">
                   <span className="flex items-center justify-between gap-3">
-                    {item.q}
+                    {item.question}
                     <span className="text-[var(--muted)] transition group-open:rotate-45">
                       +
                     </span>
                   </span>
                 </summary>
                 <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-                  {item.a}
+                  {item.answer}
                 </p>
               </details>
             ))}
@@ -421,23 +412,89 @@ export default async function HomePage() {
       </main>
 
       <footer className="border-t border-[var(--border)] bg-[var(--card)]/40">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-10 text-sm text-[var(--muted)] sm:flex-row sm:px-6">
-          <div className="flex items-center gap-2 font-display font-semibold text-[var(--foreground)]">
-            <CompassMark />
-            {APP_NAME}
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center gap-2 font-display font-semibold text-[var(--foreground)]">
+                <CompassMark />
+                {APP_NAME}
+              </div>
+              <p className="mt-3 max-w-xs text-sm leading-relaxed text-[var(--muted)]">
+                AI trip planner for day-by-day itineraries with maps, weather,
+                and budget. Free to start at trip-planner.co.
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Product
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <Link href="/#how" className="hover:text-[var(--lagoon)]">
+                    How it works
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/#features" className="hover:text-[var(--lagoon)]">
+                    Features
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/pricing" className="hover:text-[var(--lagoon)]">
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/#faq" className="hover:text-[var(--lagoon)]">
+                    FAQ
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Destinations
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                {DESTINATIONS.slice(0, 6).map((d) => (
+                  <li key={d.name}>
+                    <Link
+                      href={`/explore/${destinationSlug(d.name)}`}
+                      className="hover:text-[var(--lagoon)]"
+                    >
+                      {d.name} itinerary
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <Link href="/explore" className="hover:text-[var(--lagoon)]">
+                    All destinations →
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Account
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <Link href="/auth/sign-up" className="hover:text-[var(--lagoon)]">
+                    Create free account
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/auth/sign-in" className="hover:text-[var(--lagoon)]">
+                    Sign in
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
-          <p>
-            © {new Date().getFullYear()} {APP_NAME}. Itineraries with soul —
-            and a map that keeps up.
+          <p className="mt-10 border-t border-[var(--border)] pt-6 text-center text-sm text-[var(--muted)] sm:text-left">
+            © {new Date().getFullYear()} {APP_NAME} (trip-planner.co). AI
+            itineraries with soul — and a map that keeps up.
           </p>
-          <div className="flex gap-4">
-            <Link href="/pricing" className="hover:text-[var(--lagoon)]">
-              Pricing
-            </Link>
-            <Link href="/auth/sign-in" className="hover:text-[var(--lagoon)]">
-              Sign in
-            </Link>
-          </div>
         </div>
       </footer>
     </div>

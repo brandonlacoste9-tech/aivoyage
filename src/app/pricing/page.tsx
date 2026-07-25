@@ -1,11 +1,48 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, Sparkles } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
-import { FREE_ACTIVE_TRIPS, FREE_AI_GENERATIONS_PER_MONTH, APP_NAME } from "@/lib/config";
+import {
+  FREE_ACTIVE_TRIPS,
+  FREE_AI_GENERATIONS_PER_MONTH,
+  APP_NAME,
+} from "@/lib/config";
 import { getUser } from "@/lib/auth";
+import {
+  absoluteUrl,
+  faqPageSchema,
+  softwareApplicationSchema,
+} from "@/lib/seo";
 
-export const metadata = { title: "Pricing" };
+export const metadata: Metadata = {
+  title: "Pricing — Free & Pro AI Trip Planner",
+  description: `${APP_NAME} pricing: free AI trip planner with ${FREE_AI_GENERATIONS_PER_MONTH} itineraries/month, or Pro at $12/mo for unlimited day-by-day plans, maps, weather, and chat refine.`,
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: `Pricing · ${APP_NAME}`,
+    description:
+      "Start free with AI itineraries, maps, and share links. Upgrade to Pro for unlimited trip planning.",
+    url: absoluteUrl("/pricing"),
+  },
+};
+
+const PRICING_FAQS = [
+  {
+    question: "Is Trip Planner free?",
+    answer: `Yes. The Explorer plan is $0/month and includes ${FREE_AI_GENERATIONS_PER_MONTH} AI itineraries per month, ${FREE_ACTIVE_TRIPS} active trips, maps, weather, budget panels, and public share links.`,
+  },
+  {
+    question: "How much is Trip Planner Pro?",
+    answer:
+      "Voyager Pro is $12 per month for unlimited AI itineraries, unlimited active trips, and richer model priority. Cancel anytime.",
+  },
+  {
+    question: "Do I need a credit card to start?",
+    answer: "No. You can create an account and generate free itineraries without a credit card.",
+  },
+];
 
 export default async function PricingPage() {
   const user = await getUser();
@@ -13,6 +50,7 @@ export default async function PricingPage() {
 
   return (
     <div className="min-h-screen bg-paper">
+      <JsonLd data={[softwareApplicationSchema(), faqPageSchema(PRICING_FAQS)]} />
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto mb-14 max-w-2xl text-center">
@@ -20,11 +58,11 @@ export default async function PricingPage() {
             Pricing
           </p>
           <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-            Simple plans for real trips
+            Simple AI trip planner pricing
           </h1>
           <p className="mt-4 text-lg text-[var(--muted)]">
             Start free while you test the vibe. Upgrade when planning becomes a
-            habit — not a chore.
+            habit — not a chore. No credit card required to begin.
           </p>
         </div>
 
@@ -101,6 +139,27 @@ export default async function PricingPage() {
             </Button>
           </div>
         </div>
+
+        <section className="mx-auto mt-16 max-w-2xl">
+          <h2 className="text-center font-display text-2xl font-semibold">
+            Pricing FAQ
+          </h2>
+          <div className="mt-6 space-y-3">
+            {PRICING_FAQS.map((item) => (
+              <details
+                key={item.question}
+                className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] px-5 py-4"
+              >
+                <summary className="cursor-pointer list-none font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+                  {item.question}
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
 
         <p className="mt-12 text-center text-sm text-[var(--muted)]">
           {APP_NAME} · Cancel anytime · No surprise seats-and-baggage fees

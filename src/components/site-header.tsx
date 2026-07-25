@@ -35,10 +35,10 @@ export async function SiteHeader() {
             How it works
           </Link>
           <Link
-            href="/#destinations"
+            href="/explore"
             className="transition hover:text-[var(--lagoon)]"
           >
-            Destinations
+            Explore
           </Link>
           <Link href="/pricing" className="transition hover:text-[var(--lagoon)]">
             Pricing
