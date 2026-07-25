@@ -43,6 +43,10 @@ export function isResendConfigured() {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
+export function isPostHogConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY);
+}
+
 export function getAppUrl() {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;

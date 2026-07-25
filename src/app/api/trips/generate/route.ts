@@ -9,8 +9,9 @@ import {
 } from "@/lib/credits";
 import { fallbackCoords } from "@/lib/mapbox";
 import type { TripPreferences } from "@/lib/types";
-import { isAiConfigured, isSupabaseConfigured } from "@/lib/config";
+import { isAiConfigured, isResendConfigured, isSupabaseConfigured } from "@/lib/config";
 import { getAiProviderLabel } from "@/lib/ai/model";
+import { sendTripReadyEmail } from "@/lib/email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const maxDuration = 60;
@@ -244,6 +245,18 @@ export async function POST(req: Request) {
       } catch {
         /* non-fatal */
       }
+    }
+
+    // Best-effort trip-ready email
+    if (isResendConfigured() && user.email) {
+      void sendTripReadyEmail({
+        to: user.email,
+        tripTitle: itinerary.title || trip.title || trip.destination,
+        tripId,
+        destination: trip.destination,
+      }).catch((mailErr) =>
+        console.warn("[generate] trip-ready email skipped", mailErr),
+      );
     }
 
     return NextResponse.json({

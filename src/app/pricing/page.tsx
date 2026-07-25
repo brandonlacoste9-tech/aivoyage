@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, Sparkles } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import {
@@ -165,7 +166,17 @@ export default async function PricingPage() {
           {APP_NAME} · Cancel anytime · No surprise seats-and-baggage fees
           (those are on the airline)
         </p>
+        <p className="mt-4 text-center text-xs text-[var(--muted)]">
+          <Link href="/terms" className="hover:text-[var(--lagoon)]">
+            Terms
+          </Link>
+          {" · "}
+          <Link href="/privacy" className="hover:text-[var(--lagoon)]">
+            Privacy
+          </Link>
+        </p>
       </main>
+      <SiteFooter />
     </div>
   );
 }

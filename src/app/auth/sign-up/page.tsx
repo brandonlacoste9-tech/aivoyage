@@ -36,6 +36,14 @@ function SignUpForm() {
         toast.error(error.message);
         return;
       }
+      // Best-effort welcome email + analytics (non-blocking)
+      void fetch("/api/notify/welcome", { method: "POST" }).catch(() => {});
+      try {
+        const { trackEvent } = await import("@/lib/analytics");
+        trackEvent("signup_completed");
+      } catch {
+        /* ignore */
+      }
       toast.success("Account created — let’s build your first trip");
       const params = new URLSearchParams();
       if (prompt) params.set("prompt", prompt);
@@ -102,6 +110,17 @@ function SignUpForm() {
         <Button type="submit" variant="accent" className="w-full" disabled={loading}>
           {loading ? "Creating…" : "Create free account"}
         </Button>
+        <p className="text-center text-xs text-[var(--muted)]">
+          By creating an account you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-[var(--lagoon)]">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline hover:text-[var(--lagoon)]">
+            Privacy Policy
+          </Link>
+          .
+        </p>
         <p className="text-center text-sm text-[var(--muted)]">
           Already planning?{" "}
           <Link

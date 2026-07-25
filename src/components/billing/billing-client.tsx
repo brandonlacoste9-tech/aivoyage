@@ -43,6 +43,12 @@ export function BillingClient({
 
   function checkout() {
     startTransition(async () => {
+      try {
+        const { trackEvent } = await import("@/lib/analytics");
+        trackEvent("checkout_started", { plan: "pro" });
+      } catch {
+        /* ignore */
+      }
       const res = await createCheckoutSessionAction();
       if (!res.ok) {
         toast.error(res.error);

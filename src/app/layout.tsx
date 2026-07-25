@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { DM_Sans, Fraunces, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PostHogProvider } from "@/components/analytics/posthog-provider";
 import { Toaster } from "sonner";
 import { APP_NAME, APP_TAGLINE } from "@/lib/config";
 import {
@@ -126,7 +128,9 @@ export default function RootLayout({
         className={`${dmSans.variable} ${fraunces.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <Suspense fallback={null}>
+            <PostHogProvider>{children}</PostHogProvider>
+          </Suspense>
           <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>
